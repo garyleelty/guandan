@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #1d1d1f;
+  --color-ink2: #424245;
+  --color-ink3: #86868b;
+  --color-paper: #f2f2f7;
+  --color-paper2: #ffffff;
+  --color-blue: #007aff;
+  --color-blue2: #5ac8fa;
+  --color-orange: #ff9500;
+  --color-gold: #d4a017;
+  --radius-xl: 12px;
+  --radius-2xl: 20px;
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.05), 0 4px 12px rgb(0 0 0 / 0.06), 0 12px 32px rgb(0 0 0 / 0.07);
+  --shadow-card: 0 2px 4px rgb(0 0 0 / 0.06), 0 6px 18px rgb(0 0 0 / 0.10);
+  --animate-shake: shake 0.4s ease-in-out;
+  --animate-pop: pop 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  --animate-flash: flash 1s ease-in-out infinite;
+  --animate-deal: deal 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+
+  @keyframes shake {
+    0%, 100% { transform: translate(0, 0); }
+    20% { transform: translate(-8px, 3px); }
+    40% { transform: translate(7px, -3px); }
+    60% { transform: translate(-5px, 2px); }
+    80% { transform: translate(4px, -1px); }
+  }
+  @keyframes pop {
+    0% { transform: scale(0.6); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes flash {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+  @keyframes deal {
+    0% { transform: translateY(28px) scale(0.92); opacity: 0; }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
+  }
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: var(--color-ink);
+  background:
+    radial-gradient(120% 90% at 50% 0%, #ffffff 0%, var(--color-paper) 58%, #e8e8ee 100%);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+.glass {
+  background: rgb(255 255 255 / 0.72);
+  backdrop-filter: blur(14px) saturate(1.4);
+  border: 1px solid rgb(0 0 0 / 0.04);
+  box-shadow: var(--shadow-soft);
+}
+
+.btn {
+  @apply rounded-xl px-4 py-2 text-sm font-semibold transition active:scale-95;
+}
+.btn-primary {
+  background: linear-gradient(180deg, #2e9bff, var(--color-blue));
+  color: white;
+  box-shadow: 0 4px 14px rgb(0 122 255 / 0.35);
+}
+.btn-primary:hover { filter: brightness(1.05); }
+.btn-ghost {
+  background: rgb(255 255 255 / 0.8);
+  border: 1px solid rgb(0 0 0 / 0.06);
+  color: var(--color-ink);
+}
+.btn-ghost:hover { background: white; }
+.btn:disabled { opacity: 0.4; pointer-events: none; }
