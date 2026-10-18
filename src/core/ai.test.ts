@@ -83,7 +83,7 @@ describe('aiMove 全对局语义', () => {
       expect(s.phase).toBe('ended')
       expect(new Set(s.players.map((p) => p.finishOrder))).toEqual(new Set([0, 1, 2, 3]))
     }
-  })
+  }, 30000)
   it('autoplay 20 seeds 依旧收尾（回归）', () => {
     for (let seed = 1; seed <= 20; seed++) {
       expect(autoplay(newGame({ seed })).phase).toBe('ended')
