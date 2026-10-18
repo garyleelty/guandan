@@ -54,7 +54,8 @@ describe('identify: 炸系', () => {
     expect(identify(mk('5', '5', '5', '5', '5', '5', '5'))).toMatchObject({ type: ComboType.BOMB, count: 7 })
   })
   it('9 张同点不存在（每点至多 8 张）', () => {
-    expect(identify([mk('3', '3'), ...mk('3', '3'), ...mk('3', '3'), ...mk('3', '3'), ...mk('3')])).toBeNull()
+    const nine = Array.from({ length: 9 }, (_, i) => ({ id: `fake${i}`, rank: RANK.THREE, suit: i % 4 }))
+    expect(identify(nine)).toBeNull()
   })
   it('同花顺：同花 5 连；否则只是顺子', () => {
     expect(identify(mk('5♦', '6♦', '7♦', '8♦', '9♦'))).toMatchObject({ type: ComboType.SFLUSH, rank: 9 })

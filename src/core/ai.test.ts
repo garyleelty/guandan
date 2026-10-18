@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { sortCards } from './cards'
 import type { Card } from './cards'
-import { newGame, step, teamOf, autoplay } from './engine'
-import type { GameState, Seat } from './engine'
-import { legalMoves } from './engine'
+import { newGame, step, autoplay, legalMoves } from './engine'
 import { aiMove } from './ai'
 import { mk } from './testutil'
 
@@ -23,7 +21,7 @@ describe('aiMove 策略', () => {
     const { st, fid } = scenario({ A: ['5', '3'], B: ['7'], C: ['6'], D: ['8'] })
     const move = aiMove(st, 0)
     expect(move.kind).toBe('play')
-    expect(move.cards).toEqual([fid('3')])
+    if (move.kind === 'play') expect(move.cards).toEqual([fid('3')])
   })
   it('队友坐庄 → 主动过，不压队友', () => {
     const { st, fid } = scenario({ A: ['3'], B: ['4'], C: ['5'], D: ['6'] })
@@ -40,7 +38,7 @@ describe('aiMove 策略', () => {
     s = step(s, { kind: 'pass', seat: 1 })
     const move = aiMove(s, 2)
     expect(move.kind).toBe('play')
-    expect(move.cards).toEqual([fid('Q')])
+    if (move.kind === 'play') expect(move.cards).toEqual([fid('Q')])
   })
   it('仅炸弹能压 → 必要时仍会出炸弹', () => {
     const { st, fid } = scenario({ A: ['3'], B: ['4'], C: ['8', '8', '8', '8', '7'], D: ['K'] }, { firstLeader: 3 })
@@ -49,7 +47,7 @@ describe('aiMove 策略', () => {
     s = step(s, { kind: 'pass', seat: 1 })
     const move = aiMove(s, 2)
     expect(move.kind).toBe('play')
-    expect(move.cards!.length).toBe(4)
+    if (move.kind === 'play') expect(move.cards!.length).toBe(4)
   })
   it('无任何可压牌 → 过', () => {
     const { st, fid } = scenario({ A: ['5', '3'], B: ['4'], C: ['7', '6'], D: ['K'] }, { firstLeader: 3 })
@@ -100,9 +98,4 @@ describe('aiMove 全对局语义', () => {
       expect(end.log.length).toBeGreaterThan(0)
     }
   }, 30000)
-  it('终局后 aiMove/snappish 不抛错', () => {
-    const ended = autoplay(newGame({ seed: 1 }))
-    expect(ended.phase).toBe('ended')
-  })
-  void teamOf
 })

@@ -36,7 +36,7 @@ export interface GameState {
   log: LogEntry[]
 }
 
-export type Action = { kind: 'play' | 'pass'; seat: Seat; cards?: string[] }
+export type Action = { kind: 'pass'; seat: Seat } | { kind: 'play'; seat: Seat; cards?: string[] }
 
 export function newGame(opts?: {
   seed?: number
@@ -92,7 +92,7 @@ function doPass(state: GameState, action: Action & { kind: 'pass' }): GameState 
   st.log.push({ seat: action.seat, ids: [], combo: null })
   st.trick.pending = st.trick.pending.filter((s) => s !== action.seat)
   if (st.trick.pending.length === 0) {
-    const winner = st.trick.lastPlay.seat
+    const winner = st.trick.lastPlay!.seat
     st.trick = { leader: winner, table: null, pending: [], lastPlay: null }
     if (st.players[winner]!.finishOrder !== null) {
       st.trick.leader = nextActiveAfter(st, winner)

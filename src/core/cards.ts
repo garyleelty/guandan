@@ -22,6 +22,11 @@ export const SUIT = { SPADE: 0, HEART: 1, CLUB: 2, DIAMOND: 3 } as const
 
 export type Card = { id: string; rank: number; suit: number }
 
+export const RANK_LABEL: Record<number, string> = {
+  3: '3', 4: '4', 5: '5', 6: '6', 7: '7', 8: '8', 9: '9', 10: '10',
+  11: 'J', 12: 'Q', 13: 'K', 14: 'A', 16: '小王', 17: '大王', 18: '2',
+}
+
 const SUIT_ABBR = ['s', 'h', 'c', 'd']
 
 export function cardId(suit: number, rank: number, deckNo = 0): string {

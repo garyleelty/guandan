@@ -1,10 +1,26 @@
+import { useEffect } from 'react'
+import { useStore } from './state/store'
+import { Lobby } from './ui/Lobby'
+import { Table } from './ui/Table'
+import { aiMove } from './core/ai'
+
 export default function App() {
-  return (
-    <div className="grid h-full place-items-center">
-      <div className="glass rounded-2xl px-10 py-8 text-center">
-        <div className="text-2xl font-bold tracking-tight">掼蛋</div>
-        <div className="mt-1 text-sm text-ink3">脚手架就绪</div>
-      </div>
-    </div>
-  )
+  const screen = useStore((s) => s.screen)
+  const match = useStore((s) => s.match)
+
+  useEffect(() => {
+    if (!match || match.phase !== 'playing') return
+    const turn = match.turn
+    if (!match.players[turn]!.isBot) return
+    const delay = match.trick.table ? 350 : 750
+    const t = setTimeout(() => {
+      const cur = useStore.getState().match
+      if (!cur || cur.phase !== 'playing' || cur.turn !== turn) return
+      const mv = aiMove(cur, turn)
+      useStore.getState().dispatch(mv)
+    }, delay)
+    return () => clearTimeout(t)
+  }, [match])
+
+  return screen === 'lobby' || !match ? <Lobby /> : <Table />
 }
