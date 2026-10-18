@@ -23,6 +23,7 @@
 - 关键修复：broadcastState/hostApplyIntent 以 store.match 为唯一真相（房主本地出牌曾导致 room.match 过期）；commit "fix(net): broadcast reads store as source of truth"。
 - 掉线 AI 接管（hostDrop）、满房 leave+close、客人断线提示 guestLost。
 
-## S6 部署/验收 in_progress
+## S6 部署/验收 done
 - .github/workflows/deploy.yml（bun → tsc → vitest → GH_PAGES build → deploy-pages）；GH_PAGES=1 build/preview 本地验证通过。
-- 截图归档 docs/screenshots/（01-lobby/02-table-start/03-midgame/04-bomb-fx/05-settlement）；待 push 后 CI 全绿即 done。
+- 截图归档 docs/screenshots/（01-lobby/02-table-start/03-midgame/04-bomb-fx/05-settlement）。
+- 2026-10-18 推送到 github.com/garyleelty/guandan（main），CI 与 deploy-pages 均 success；线上 https://garyleelty.github.io/guandan/ index+assets 200；标题修正为「掼蛋 · Guandan」后再次部署成功。
