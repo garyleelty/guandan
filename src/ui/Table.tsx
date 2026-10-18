@@ -7,7 +7,6 @@ import { RANK_LABEL } from '../core/cards'
 import type { GameState, Seat } from '../core/engine'
 import { teamOf } from '../core/engine'
 import { isMuted, playSound, toggleMute } from './sound'
-import type { SoundKind } from './sound'
 
 const COMBO_LABEL: Record<number, string> = {
   0: '单张', 1: '对子', 2: '三张', 3: '三带二', 4: '顺子', 5: '连对', 6: '钢板',

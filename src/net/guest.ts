@@ -43,7 +43,7 @@ function guestHandle(msg: Msg): void {
     return
   }
   if (msg.t === 'state') {
-    const g = (window as unknown as Record<string, { conn: unknown } | undefined>).__gdGuest
+    const g = (window as unknown as Record<string, { conn: unknown; seat?: number } | undefined>).__gdGuest
     if (g) g.seat = msg.seat
     const st = deserialized(msg.state)
     useStore.setState({ match: st, mySeat: msg.seat, screen: 'table' })
