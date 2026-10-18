@@ -62,8 +62,8 @@ describe('aiMove 策略', () => {
 })
 
 describe('aiMove 全对局语义', () => {
-  it('50 局全自动（AI 移动每步都合法）都能收尾且座次唯一', () => {
-    for (let seed = 1; seed <= 50; seed++) {
+  it('100 局全自动（AI 移动每步都合法）都能收尾且座次唯一', () => {
+    for (let seed = 1; seed <= 100; seed++) {
       let s = newGame({ seed })
       let guard = 0
       while (s.phase === 'playing' && guard++ < 5000) {
@@ -91,6 +91,15 @@ describe('aiMove 全对局语义', () => {
       expect(autoplay(newGame({ seed })).phase).toBe('ended')
     }
   })
+  it('autoplay 400 局回归：全部 ended、座次 0..3 单调、无崩溃', () => {
+    for (let seed = 1; seed <= 400; seed++) {
+      const end = autoplay(newGame({ seed }))
+      expect(end.phase).toBe('ended')
+      const orders = end.players.map((p) => p.finishOrder!)
+      expect([...orders].sort((a, b) => a - b)).toEqual([0, 1, 2, 3])
+      expect(end.log.length).toBeGreaterThan(0)
+    }
+  }, 30000)
   it('终局后 aiMove/snappish 不抛错', () => {
     const ended = autoplay(newGame({ seed: 1 }))
     expect(ended.phase).toBe('ended')
