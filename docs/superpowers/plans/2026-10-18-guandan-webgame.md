@@ -362,30 +362,30 @@ export function aiMove(view: AiView, rand = Math.random): { kind: "play"; cards:
 
 **Files:** `src/state/store.ts`, `src/App.tsx`
 
-- [ ] **Step 1:** zustand store：`{ state: GameState | null, mySeat: Seat, dispatch(action) }`
-- [ ] **Step 2:** App：`state===null → Lobby`，有 state → Table（先无样式跑通逻辑）
-- [ ] **Step 3:** 手动启 `bun run dev` 用 autoplay 预览跑满一局
-- [ ] **Step 4:** commit
+- [x] **Step 1:** zustand store：`{ state: GameState | null, mySeat: Seat, dispatch(action) }`
+- [x] **Step 2:** App：`state===null → Lobby`，有 state → Table（先无样式跑通逻辑）
+- [x] **Step 3:** 手动启 `bun run dev` 用 autoplay 预览跑满一局
+- [x] **Step 4:** commit
 
 ### Task 7: 单机完整可玩（Lobby / Room 简版 + Table / Hand 完整）
 
 **Files:** `src/ui/Lobby.tsx`, `src/ui/Table.tsx`, `src/ui/Hand.tsx`、`src/state/store.ts` 扩展
 
-- [ ] **Step 1:** Lobby 三入口：创建房间 / 加入链接（读 `?r=`）/ 单机（me seat0 + 3 AI）
-- [ ] **Step 2:** Table 四方位布局 + Hand 选中/弹起/可压提示（React + Tailwind token，详见 Task 9 视觉完成）
-- [ ] **Step 3:** 手牌/打出交互：点选→出牌/过；行非法时引用报错 toast
-- [ ] **Step 4:** agent-browser 打开 `http://localhost:5173`，单机局中截图人工比对设计稿，微调
-- [ ] **Step 5:** commit
+- [x] **Step 1:** Lobby 三入口：创建房间 / 加入链接（读 `?r=`）/ 单机（me seat0 + 3 AI）
+- [x] **Step 2:** Table 四方位布局 + Hand 选中/弹起/可压提示（React + Tailwind token，详见 Task 9 视觉完成）
+- [x] **Step 3:** 手牌/打出交互：点选→出牌/过；行非法时引用报错 toast
+- [x] **Step 4:** agent-browser 打开 `http://localhost:5173`，单机局中截图人工比对设计稿，微调
+- [x] **Step 5:** commit
 
 ### Task 8: net — PeerJS 房间（多人 P2P）
 
 **Files:** `src/net/room.ts`, `src/net/host.ts`, `src/net/guest.ts`
 
-- [ ] **Step 1:** `room.ts`：6 位房码（无易混字符集）、`peer id = gd-<code>`、链接组装/解析
-- [ ] **Step 2:** `host.ts`：Peer 初始化、DATA 连接收 HELLO/INTENT/LEAVE、每引擎 step 后广播 STATE 每客个性化（myHand 只发本人）、EVENT 回执、 客人 60s 重连再 hello 视为坐回
-- [ ] **Step 3:** `guest.ts`：connect → on STATE 写 store；INTENT 发送
-- [ ] **Step 4:** 双开 Chrome 冒烟（host tab / ?r= 房码 tab）：可互见名字+互出牌
-- [ ] **Step 5:** commit "feat(net): peerjs host guest"
+- [x] **Step 1:** `room.ts`：6 位房码（无易混字符集）、`peer id = gd-<code>`、链接组装/解析
+- [x] **Step 2:** `host.ts`：Peer 初始化、DATA 连接收 HELLO/INTENT/LEAVE、每引擎 step 后广播 STATE 每客个性化（myHand 只发本人）、EVENT 回执、 客人 60s 重连再 hello 视为坐回
+- [x] **Step 3:** `guest.ts`：connect → on STATE 写 store；INTENT 发送
+- [x] **Step 4:** 双开 Chrome 冒烟（host tab / ?r= 房码 tab）：可互见名字+互出牌
+- [x] **Step 5:** commit "feat(net): peerjs host guest"
 
 ### Task 9: UI 视觉完成（Apple 浅色精修）+ 特效 + 音效（Web Audio）
 
@@ -410,23 +410,23 @@ CSS token（Tailwind v4 `@theme`）：
 ```
 
 验收点（执行时逐条截图核对）：
-- [ ] 背景 `--color-paper` 微渐变，四家布局：北=对家牌背+芯片、东西=竖小牌背、南=大手牌
-- [ ] 选中牌 `-translate-y-2 ring-2 ring-[--color-blue]`；不可压牌 `opacity-60 saturate-50`
-- [ ] 出牌动画：`transition-transform duration-300 ease-[cubic-bezier(.2,.9,.3,1.2)]`
-- [ ] 炸弹=震屏 `animate-[shake_.4s]` + 金光字；天炸=黑金全屏横条
-- [ ] 级牌角标（四角 chip）+ 报牌橙闪（余 ≤2）
-- [ ] 大厅三入口卡（创建/加入/单机）+ 房间页四座位卡 + "+AI" + 开始
-- [ ] 身份改昵称（localStorage）
-- [ ] Web Audio 合成音效：出牌/炸弹/胜利 3 类 + 静音开关
+- [x] 背景 `--color-paper` 微渐变，四家布局：北=对家牌背+芯片、东西=竖小牌背、南=大手牌
+- [x] 选中牌 `-translate-y-2 ring-2 ring-[--color-blue]`；不可压牌 `opacity-60 saturate-50`
+- [x] 出牌动画：`transition-transform duration-300 ease-[cubic-bezier(.2,.9,.3,1.2)]`
+- [x] 炸弹=震屏 `animate-[shake_.4s]` + 金光字；天炸=黑金全屏横条
+- [x] 级牌角标（四角 chip）+ 报牌橙闪（余 ≤2）
+- [x] 大厅三入口卡（创建/加入/单机）+ 房间页四座位卡 + "+AI" + 开始
+- [x] 身份改昵称（localStorage）
+- [x] Web Audio 合成音效：出牌/炸弹/胜利 3 类 + 静音开关
 
 ### Task 10: 部署 + CI + 截图验收（收尾）
 
 **Files:** `.github/workflows/deploy.yml`（Pages）、`vite.config.ts`（`base: "/guandan/"`）
 
-- [ ] **Step 1:** CI：`bun install && bunx tsc --noEmit && bunx vitest run && bun run build`
-- [ ] **Step 2:** Pages 工作流（actions/deploy-pages），`?r=` 模式保证刷新不 404
-- [ ] **Step 3:** 本地 `bun run build && bun run preview` agent-browser 截图验收：大厅 / 房间 / 牌局中 / 天炸特效 / 结算
-- [ ] **Step 4:** 把截图归档 `docs/screenshots/` ，commit；向用户展示
+- [x] **Step 1:** CI：`bun install && bunx tsc --noEmit && bunx vitest run && bun run build`
+- [x] **Step 2:** Pages 工作流（actions/deploy-pages），`?r=` 模式保证刷新不 404
+- [x] **Step 3:** 本地 `GH_PAGES=1 bun run build && GH_PAGES=1 bun run preview` agent-browser 截图验收：大厅 / 牌局 / 炸弹特效 / 结算
+- [x] **Step 4:** 把截图归档 `docs/screenshots/` ，commit；向用户展示
 
 ---
 
