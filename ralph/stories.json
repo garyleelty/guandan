@@ -6,18 +6,38 @@
       "id": "S1",
       "title": "项目脚手架（Bun+Vite+React+TS+Tailwind v4+vitest）",
       "criteria": [
-        { "id": "S1-1", "desc": "bun run build 零错误", "check": "cmd" },
-        { "id": "S1-2", "desc": "bunx vitest run 可运行（至少 1 个冒烟用例）", "check": "cmd" }
+        {
+          "id": "S1-1",
+          "desc": "bun run build 零错误",
+          "check": "cmd"
+        },
+        {
+          "id": "S1-2",
+          "desc": "bunx vitest run 可运行（至少 1 个冒烟用例）",
+          "check": "cmd"
+        }
       ],
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "S2",
       "title": "引擎牌：cards/combos（108张、洗牌、排序、牌型识别与比较）",
       "criteria": [
-        { "id": "S2-1", "desc": "cards.test 覆盖：108张/4王/8张2/seed可复现/排序/发牌27x4", "check": "cmd" },
-        { "id": "S2-2", "desc": "combos.test 覆盖：全牌型 + 边界（JQKA2非法、A2345非法、6张非顺、双王非炸、同花顺、8张炸）", "check": "cmd" },
-        { "id": "S2-3", "desc": "bunx vitest run 全绿", "check": "cmd" }
+        {
+          "id": "S2-1",
+          "desc": "cards.test 覆盖：108张/4王/8张2/seed可复现/排序/发牌27x4",
+          "check": "cmd"
+        },
+        {
+          "id": "S2-2",
+          "desc": "combos.test 覆盖：全牌型 + 边界（JQKA2非法、A2345非法、6张非顺、双王非炸、同花顺、8张炸）",
+          "check": "cmd"
+        },
+        {
+          "id": "S2-3",
+          "desc": "bunx vitest run 全绿",
+          "check": "cmd"
+        }
       ],
       "status": "todo"
     },
@@ -25,9 +45,21 @@
       "id": "S3",
       "title": "引擎局：engine 状态机 + ai 策略 + 升级计分",
       "criteria": [
-        { "id": "S3-1", "desc": "engine.test：出牌/过/收拢trick/头游二游/接风/终局/计分(3,2,1)/A级双下判定", "check": "cmd" },
-        { "id": "S3-2", "desc": "ai.test：100 局 fuzz 中 AI 每步都是 legalMoves；策略断言（队友配合/炸弹时机/最小压）", "check": "cmd" },
-        { "id": "S3-3", "desc": "autoplay 400 局回归：全部能 ended、finish 序列单调、无崩溃", "check": "cmd" }
+        {
+          "id": "S3-1",
+          "desc": "engine.test：出牌/过/收拢trick/头游二游/接风/终局/计分(3,2,1)/A级双下判定",
+          "check": "cmd"
+        },
+        {
+          "id": "S3-2",
+          "desc": "ai.test：100 局 fuzz 中 AI 每步都是 legalMoves；策略断言（队友配合/炸弹时机/最小压）",
+          "check": "cmd"
+        },
+        {
+          "id": "S3-3",
+          "desc": "autoplay 400 局回归：全部能 ended、finish 序列单调、无崩溃",
+          "check": "cmd"
+        }
       ],
       "status": "todo"
     },
@@ -35,11 +67,31 @@
       "id": "S4",
       "title": "单机完整可玩 UI（Apple 浅色）",
       "criteria": [
-        { "id": "S4-1", "desc": "大厅三入口（创建/加入/单机）", "check": "manual" },
-        { "id": "S4-2", "desc": "牌桌四方位+手牌选中弹起+可压牌高亮+牌数/级牌/报牌显示", "check": "manual" },
-        { "id": "S4-3", "desc": "炸弹/天炸特效+音效开关", "check": "manual" },
-        { "id": "S4-4", "desc": "单机一局能打到结算页", "check": "manual" },
-        { "id": "S4-5", "desc": "截图归档 docs/screenshots/", "check": "manual" }
+        {
+          "id": "S4-1",
+          "desc": "大厅三入口（创建/加入/单机）",
+          "check": "manual"
+        },
+        {
+          "id": "S4-2",
+          "desc": "牌桌四方位+手牌选中弹起+可压牌高亮+牌数/级牌/报牌显示",
+          "check": "manual"
+        },
+        {
+          "id": "S4-3",
+          "desc": "炸弹/天炸特效+音效开关",
+          "check": "manual"
+        },
+        {
+          "id": "S4-4",
+          "desc": "单机一局能打到结算页",
+          "check": "manual"
+        },
+        {
+          "id": "S4-5",
+          "desc": "截图归档 docs/screenshots/",
+          "check": "manual"
+        }
       ],
       "status": "todo"
     },
@@ -47,8 +99,16 @@
       "id": "S5",
       "title": "多人 P2P（PeerJS 房间、链接加入、AI 填位）",
       "criteria": [
-        { "id": "S5-1", "desc": "创建房间→链接第二标签页加入→两人同时在线显示 seat", "check": "manual" },
-        { "id": "S5-2", "desc": "双方互出牌同步一致；AI 填位可开局", "check": "manual" }
+        {
+          "id": "S5-1",
+          "desc": "创建房间→链接第二标签页加入→两人同时在线显示 seat",
+          "check": "manual"
+        },
+        {
+          "id": "S5-2",
+          "desc": "双方互出牌同步一致；AI 填位可开局",
+          "check": "manual"
+        }
       ],
       "status": "todo"
     },
@@ -56,8 +116,16 @@
       "id": "S6",
       "title": "部署 + CI + 截图验收",
       "criteria": [
-        { "id": "S6-1", "desc": "GitHub Actions: tsc+vitest+build 全绿", "check": "cmd" },
-        { "id": "S6-2", "desc": "本地 preview 截图（大厅/房间/牌局/特效/结算）给用户确认", "check": "manual" }
+        {
+          "id": "S6-1",
+          "desc": "GitHub Actions: tsc+vitest+build 全绿",
+          "check": "cmd"
+        },
+        {
+          "id": "S6-2",
+          "desc": "本地 preview 截图（大厅/房间/牌局/特效/结算）给用户确认",
+          "check": "manual"
+        }
       ],
       "status": "todo"
     }
