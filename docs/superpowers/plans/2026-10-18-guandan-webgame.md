@@ -27,10 +27,10 @@
 
 **Files:** `package.json`, `vite.config.ts`, `tsconfig.json`, `index.html`, `src/main.tsx`, `src/App.tsx`（占位）, `src/styles.css`(Tailwind v4 全局), `.github/workflows/ci.yml`
 
-- [ ] **Step 1:** `bun create vite@latest . --template react-ts` 骨架；安装 `react react-dom zustand peerjs`、dev: `vite @vitejs/plugin-react typescript vitest @types/react @types/react-dom tailwindcss @tailwindcss/vite`
-- [ ] **Step 2:** `src/styles.css`: `@import "tailwindcss";` + Apple 浅色 token（见 Task 9 CSS 块）
-- [ ] **Step 3:** `bunx vitest run`（空测试可过）→ `bun run build` 过
-- [ ] **Step 4:** commit "chore: scaffold vite react-ts bun"
+- [x] **Step 1:** `bun create vite@latest . --template react-ts` 骨架；安装 `react react-dom zustand peerjs`、dev: `vite @vitejs/plugin-react typescript vitest @types/react @types/react-dom tailwindcss @tailwindcss/vite`
+- [x] **Step 2:** `src/styles.css`: `@import "tailwindcss";` + Apple 浅色 token（见 Task 9 CSS 块）
+- [x] **Step 3:** `bunx vitest run`（空测试可过）→ `bun run build` 过
+- [x] **Step 4:** commit "chore: scaffold vite react-ts bun"
 
 ### Task 2: core/cards — 牌的定义、洗牌、发牌、排序（TDD）
 
@@ -38,7 +38,7 @@
 - Create: `src/core/cards.ts`
 - Test: `src/core/cards.test.ts`
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -83,8 +83,8 @@ function deckHands(deck: Card[], seat: number): Card[] {
 }
 ```
 
-- [ ] **Step 2:** `bunx vitest run` → FAIL（模块不存在）
-- [ ] **Step 3: 实现**
+- [x] **Step 2:** `bunx vitest run` → FAIL（模块不存在）
+- [x] **Step 3: 实现**
 
 ```ts
 export const RANK = { THREE: 3, FOUR: 4, FIVE: 5, SIX: 6, SEVEN: 7, EIGHT: 8, NINE: 9, TEN: 10, JACK: 11, QUEEN: 12, KING: 13, ACE: 14, SJ: 16, BJ: 17, TWO: 18 } as const;
@@ -127,14 +127,14 @@ export function deal(deck: Card[]): Card[][] {
 }
 ```
 
-- [ ] **Step 4:** `bunx vitest run` → PASS
-- [ ] **Step 5:** commit "feat(core): cards deck shuffle deal sort"
+- [x] **Step 4:** `bunx vitest run` → PASS
+- [x] **Step 5:** commit "feat(core): cards deck shuffle deal sort"
 
 ### Task 3: core/combos — 牌型识别与比较（TDD，边界最多的模块）
 
 **Files:** Create `src/core/combos.ts`, Test `src/core/combos.test.ts`
 
-- [ ] **Step 1: 写失败测试（关键边界全覆盖）**
+- [x] **Step 1: 写失败测试（关键边界全覆盖）**
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -191,8 +191,8 @@ describe("beats（可以不打，非法组合直接 identify 为 null）", () =>
 
 注：`mk`/`testutil` 由步骤 3 提供（含 `"6●"` = 同花六的宽松写法），避免测试里手写对象。
 
-- [ ] **Step 2:** FAIL
-- [ ] **Step 3: 实现（识别→比较）**
+- [x] **Step 2:** FAIL
+- [x] **Step 3: 实现（识别→比较）**
 
 ```ts
 import { RANK } from "./cards";
@@ -232,8 +232,8 @@ export function identify(cards: Card[]): Combo | null {
 6. TRIPLE_PAIR：3+2 两点
 7. `beats(a, b)`：a.type===JOKERS → true；a.type===SFLUSH → b.type!==SFLUSH ? true : 同长比点；a.type===BOMB → b 非炸（非 SFLUSH/BOMB/JOKERS）true，同型 BOMB 数量优先再点数；否则同 type 且（count 相等）比 rank，否则 false
 
-- [ ] **Step 4:** PASS
-- [ ] **Step 5:** commit "feat(core): combos identify beats"
+- [x] **Step 4:** PASS
+- [x] **Step 5:** commit "feat(core): combos identify beats"
 
 ### Task 4: core/engine — 状态机（TDD）
 
@@ -266,7 +266,7 @@ export type PlayedEntry = { seat: Seat; combo: Combo | null }  // null=过
 export type Action = { kind: "play" | "pass"; seat: Seat; cards?: string[] /*ids*/ };
 ```
 
-- [ ] **Step 1: 失败测试（以下行为逐条断言）**
+- [x] **Step 1: 失败测试（以下行为逐条断言）**
 
 ```ts
 核心场景（用 newGame(seed) 起 4 人手牌，手动构造小牌局面驱动）：
@@ -284,8 +284,8 @@ export type Action = { kind: "play" | "pass"; seat: Seat; cards?: string[] /*ids
 
 用 helper 驱动而不是手撕 108 张：`testDriver(state)` 封装“按 AI 挑最小合法牌打完一整局”的 `autoplay(state)`，验证 6/7（随机 seed 100 局：全部能 ended 且 finish 1..4 单调）。
 
-- [ ] **Step 2:** FAIL
-- [ ] **Step 3: 实现**
+- [x] **Step 2:** FAIL
+- [x] **Step 3: 实现**
 
 引擎样例骨架（实现时补全所有分支）：
 
@@ -312,14 +312,14 @@ export function autoplay(state: GameState, rand = Math.random): GameState { /* A
 6. **levels 推进**：赢队 level += delta（14 封顶不越），下一局级牌 = max(两 level)
 7. **log 全记录**，`handBySeat` 镜像供 UI 读取座位手牌
 
-- [ ] **Step 4:** PASS（含 100 局 autoplay 单不崩断言）
-- [ ] **Step 5:** commit "feat(core): engine state machine"
+- [x] **Step 4:** PASS（含 100 局 autoplay 单不崩断言）
+- [x] **Step 5:** commit "feat(core): engine state machine"
 
 ### Task 5: core/ai — 中等策略（TDD + 模拟回归）
 
 **Files:** Create `src/core/ai.ts`, Test `src/core/ai.test.ts`
 
-- [ ] **Step 1: 失败测试**
+- [x] **Step 1: 失败测试**
 
 ```ts
 1. aiMove 永远是 legalMoves 之一（100 随机局面 fuzz）
@@ -330,8 +330,8 @@ export function autoplay(state: GameState, rand = Math.random): GameState { /* A
 6. 记牌：手上有明确的“对手不可能有更大”的单张（对手全过且他家剩数为 0）→ 大牌压发
 ```
 
-- [ ] **Step 2:** FAIL
-- [ ] **Step 3: 实现（打分制 heuristic）**
+- [x] **Step 2:** FAIL
+- [x] **Step 3: 实现（打分制 heuristic）**
 
 ```ts
 export type AiView = {
@@ -355,8 +355,8 @@ export function aiMove(view: AiView, rand = Math.random): { kind: "play"; cards:
 5. **残局**：我方剩 1 张/对且为最大可能点 → 优先甩出
 6. 记牌：用 seenRanks 判断“该点数已空+别人手牌数为最小单张”→ 主动大单锁头
 
-- [ ] **Step 4:** PASS + `bunx vitest run src/core/ai.test.ts`
-- [ ] **Step 5:** 400 局 autoplay 回归（无断言失败即过）+ commit
+- [x] **Step 4:** PASS + `bunx vitest run src/core/ai.test.ts`
+- [x] **Step 5:** 400 局 autoplay 回归（无断言失败即过）+ commit
 
 ### Task 6: 状态接 UI（未完 UI 先接 store，最小 React 挂点）
 

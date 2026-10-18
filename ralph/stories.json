@@ -39,7 +39,7 @@
           "check": "cmd"
         }
       ],
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "S3",
@@ -61,7 +61,7 @@
           "check": "cmd"
         }
       ],
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "S4",
