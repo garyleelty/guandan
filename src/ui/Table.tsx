@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { CardFace } from './CardFace'
 import { Hand } from './Hand'
 import { useStore } from '../state/store'
@@ -6,6 +6,8 @@ import { identify, beats } from '../core/combos'
 import { RANK_LABEL } from '../core/cards'
 import type { GameState, Seat } from '../core/engine'
 import { teamOf } from '../core/engine'
+import { isMuted, playSound, toggleMute } from './sound'
+import type { SoundKind } from './sound'
 
 const COMBO_LABEL: Record<number, string> = {
   0: '单张', 1: '对子', 2: '三张', 3: '三带二', 4: '顺子', 5: '连对', 6: '钢板',
@@ -101,7 +103,25 @@ export function Table() {
     setSelected(new Set())
   }
 
+  const [fx, setFx] = useState<0 | 7 | 9>(0)
+  const [mute, setMute] = useState(isMuted())
+
   const lastLog = st.log[st.log.length - 1]
+  useEffect(() => {
+    const combo = lastLog?.combo
+    if (!combo) return
+    if (combo.type === 7 || combo.type === 9) {
+      setFx(combo.type as 7 | 9)
+      playSound('bomb')
+      const t = setTimeout(() => setFx(0), 1100)
+      return () => clearTimeout(t)
+    }
+    playSound('play')
+  }, [st.log.length])
+
+  useEffect(() => {
+    if (st.phase === 'ended') playSound('win')
+  }, [st.phase])
   const banner = !lastLog
     ? null
     : lastLog.combo === null
@@ -137,6 +157,25 @@ export function Table() {
         ) : (
           <div className="relative z-10 text-sm text-ink3">等待 {st.players[st.turn]!.name} 领出</div>
         )}
+        {fx > 0 && (
+          <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center overflow-hidden rounded-[28px]">
+            <div className={fx === 9 ? 'absolute inset-0' : 'absolute inset-4 animate-shake'}>
+              {fx === 9 ? (
+                <div className="absolute inset-x-0 top-[30%] flex h-24 items-center justify-center bg-gradient-to-r from-black via-[#1a1a1c] to-black shadow-[0_0_60px_rgba(212,160,23,.8)]">
+                  <span className="bg-gradient-to-b from-gold to-[#8a6a00] bg-clip-text text-4xl font-black tracking-[.3em] text-transparent">
+                    天 炸
+                  </span>
+                </div>
+              ) : (
+                <div className="grid h-full w-full place-items-center rounded-[28px] bg-gradient-to-b from-gold/10 to-transparent">
+                  <span className="animate-pop bg-gradient-to-b from-gold to-[#8a6a00] bg-clip-text text-5xl font-black tracking-[.2em] text-transparent drop-shadow-[0_2px_18px_rgba(212,160,23,.6)]">
+                    炸 弹
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         {st.phase === 'ended' && (
           <EndOverlay onRematch={useStore.getState().rematch} onLobby={useStore.getState().backToLobby} />
         )}
@@ -158,6 +197,14 @@ export function Table() {
             过
           </button>
           {myTurn && !table && <span className="text-[11px] text-ink3">轮到你领出</span>}
+          <button
+            className="btn btn-ghost !px-2.5 text-xs"
+            title={mute ? '开启音效' : '静音'}
+            onClick={() => setMute(toggleMute())}
+            data-testid="mute"
+          >
+            {mute ? '🔇' : '🔊'}
+          </button>
         </div>
         <Hand
           hand={me.hand}
