@@ -86,3 +86,5 @@ export const useStore = create<Store>((set, get) => ({
 }))
 
 export const dispatchAt = (a: Action): void => useStore.getState().dispatch(a)
+
+;(window as unknown as Record<string, unknown>).__gdStore = useStore

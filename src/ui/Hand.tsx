@@ -5,12 +5,14 @@ export function Hand({
   hand,
   selected,
   toggle,
+  quickLead,
   dimmed,
   levelRank,
 }: {
   hand: Card[]
   selected: Set<string>
   toggle: (id: string) => void
+  quickLead?: (id: string) => void
   dimmed?: (c: Card) => boolean
   levelRank?: number
 }) {
@@ -20,6 +22,7 @@ export function Hand({
         <button
           key={c.id}
           onClick={() => toggle(c.id)}
+          onDoubleClick={() => quickLead?.(c.id)}
           className="cursor-pointer bg-transparent border-0 p-0"
           style={{ marginLeft: i === 0 ? 0 : -26, zIndex: i, animationDelay: `${Math.min(i * 18, 500)}ms` }}
           aria-label={c.id}

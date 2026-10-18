@@ -90,6 +90,11 @@ export function Table() {
     dispatch({ kind: 'play', seat: mySeat, cards: selCards.map((c) => c.id) })
     setSelected(new Set())
   }
+  const quickLead = (id: string) => {
+    if (!myTurn || table) return
+    setSelected(new Set([id]))
+    dispatch({ kind: 'play', seat: mySeat, cards: [id] })
+  }
   const pass = () => {
     if (!canPass) return
     dispatch({ kind: 'pass', seat: mySeat })
@@ -158,6 +163,7 @@ export function Table() {
           hand={me.hand}
           selected={selected}
           toggle={toggle}
+          quickLead={quickLead}
           levelRank={levelRank}
           dimmed={(c) => {
             if (!myTurn || !table) return false

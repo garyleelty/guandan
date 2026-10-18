@@ -27,6 +27,7 @@ export function joinRoom(codeOrUrl?: string): 'bad-code' | 'connecting' | 'start
     conn.on('open', () => {
       conn.send({ t: 'hello', name: localStorage.getItem('gd-nick') || '玩家' } satisfies Msg)
       useStore.setState({ joining: false, intentSink: (a) => conn.send({ t: 'intent', action: a } satisfies Msg), teardown: leaveGuest })
+      ;(window as unknown as Record<string, unknown>).__gdGuest = { conn, seat: null }
     })
     conn.on('data', (raw: unknown) => guestHandle(raw as Msg))
     conn.on('close', () => useStore.setState({ joining: false, guestLost: true }))
@@ -42,6 +43,8 @@ function guestHandle(msg: Msg): void {
     return
   }
   if (msg.t === 'state') {
+    const g = (window as unknown as Record<string, { conn: unknown } | undefined>).__gdGuest
+    if (g) g.seat = msg.seat
     const st = deserialized(msg.state)
     useStore.setState({ match: st, mySeat: msg.seat, screen: 'table' })
     return

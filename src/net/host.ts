@@ -42,6 +42,7 @@ export function createRoom(): void {
   const usedNames = new Set<string>([seats[0]!.name])
   const peer = new Peer(peerIdOf(code))
   room = { code, peer, seats, match: null, usedNames }
+  ;(window as unknown as Record<string, unknown>).__gdHost = room
 
   peer.on('open', () => {
     useStore.setState({ screen: 'room', mode: 'host', roomCode: code, roomSeats: [...room!.seats] })
@@ -128,20 +129,25 @@ export function hostStart(): void {
 
 export function broadcastState(): void {
   const r = room
-  if (!r || !r.match) return
+  if (!r) return
+  const m = useStore.getState().match ?? r.match
+  if (!m) return
+  r.match = m
   for (const s of r.seats) {
     if (s.kind !== 'guest' || !s.connId) continue
     const conn = (r.peer.connections as Record<string, DataConnection[]>)[s.connId]?.[0]
-    conn?.send({ t: 'state', state: serializeFor(r.match, s.seat), seat: s.seat } satisfies Msg)
+    conn?.send({ t: 'state', state: serializeFor(m, s.seat), seat: s.seat } satisfies Msg)
   }
 }
 
 export function hostApplyIntent(seat: Seat, action: Action): void {
   const r = room
-  if (!r || !r.match || r.match.phase !== 'playing') return
-  if (r.match.turn !== seat) return
-  const next = step(r.match, action)
-  if (next === r.match) return
+  if (!r) return
+  const m = useStore.getState().match ?? r.match
+  if (!m || m.phase !== 'playing') return
+  if (m.turn !== seat) return
+  const next = step(m, action)
+  if (next === m) return
   r.match = next
   useStore.setState({ match: next })
   broadcastState()
