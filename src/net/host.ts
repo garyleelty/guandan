@@ -21,6 +21,8 @@ export interface HostRoom {
   seats: RoomSeat[]
   match: GameState | null
   usedNames: Set<string>
+  /** 观战的人：只看牌，不上桌 */
+  spectators: { connId: string; name: string }[]
 }
 
 let room: HostRoom | null = null
@@ -43,7 +45,7 @@ export function createRoom(): void {
   const seats = initialSeats()
   const usedNames = new Set<string>([seats[0]!.name])
   const peer = new Peer(peerIdOf(code))
-  room = { code, peer, seats, match: null, usedNames }
+  room = { code, peer, seats, match: null, usedNames, spectators: [] }
   ;(window as unknown as Record<string, unknown>).__gdHost = room
 
   peer.on('open', () => {
@@ -78,6 +80,22 @@ function hostHandle(conn: DataConnection, msg: Msg): void {
     return
   }
   if (msg.t !== 'hello') return
+  if (msg.watch) {
+    // 观战：不占座位，只收状态
+    const watchName = (msg.name || '观众').slice(0, 8)
+    r.spectators = r.spectators.filter((sp) => sp.connId !== conn.peer)
+    r.spectators.push({ connId: conn.peer, name: watchName })
+    conn.send({
+      t: 'welcome',
+      seat: -1,
+      seats: r.seats.map((s) => ({ seat: s.seat, name: s.name, kind: s.kind })),
+      reconnected: false,
+    } satisfies Msg)
+    if (r.match) {
+      conn.send({ t: 'state', state: serializeFor(r.match, 0), seat: 0 } satisfies Msg)
+    }
+    return
+  }
   // 认领原座：同一个 token 再来（刷新页面、断线重连）就还是那个座位
   const token = msg.token
   // 房主座位没有 token；客人座位断线后会变空位/AI，但 token 留着，好让重连认领
@@ -118,6 +136,10 @@ function usedName(r: HostRoom, name: string): boolean {
 function hostDrop(conn: DataConnection): void {
   const r = room
   if (!r) return
+  if (r.spectators.some((sp) => sp.connId === conn.peer)) {
+    r.spectators = r.spectators.filter((sp) => sp.connId !== conn.peer)
+    return
+  }
   const seat = r.seats.find((s) => s.connId === conn.peer)
   if (!seat) return
   const wasGuest = seat.kind === 'guest'
@@ -192,6 +214,10 @@ export function broadcastState(): void {
     if (s.kind !== 'guest' || !s.connId) continue
     const conn = (r.peer.connections as Record<string, DataConnection[]>)[s.connId]?.[0]
     conn?.send({ t: 'state', state: serializeFor(m, s.seat), seat: s.seat } satisfies Msg)
+  }
+  for (const sp of r.spectators) {
+    const conn = (r.peer.connections as Record<string, DataConnection[]>)[sp.connId]?.[0]
+    conn?.send({ t: 'state', state: serializeFor(m, 0), seat: 0 } satisfies Msg)
   }
 }
 

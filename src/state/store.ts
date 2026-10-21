@@ -32,6 +32,8 @@ interface Store {
   reconnected: boolean
   /** 被房主请出房间时的说明（空串 = 普通掉线） */
   kicked: string
+  /** 观战：只看牌，不上桌 */
+  spectating: boolean
   intentSink: ((a: Action) => void) | null
   afterDispatch: (() => void) | null
   teardown: (() => void) | null
@@ -55,6 +57,7 @@ export const useStore = create<Store>((set, get) => ({
   guestLost: false,
   reconnected: false,
   kicked: '',
+  spectating: false,
   intentSink: null,
   afterDispatch: null,
   teardown: null,

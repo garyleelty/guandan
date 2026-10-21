@@ -162,6 +162,7 @@ function HostSide({ code, seats }: { code: string | null; seats: RoomSeats }) {
   const link = code ? shareLink(code) : ''
   const seatList = seats ?? []
   const aiLevel = useStore((s) => s.aiLevel)
+  const watchLink = code ? `${shareLink(code)}&watch=1` : ''
   return (
     <div className="mx-auto w-full max-w-[480px] px-4 py-8">
       <div className="panel p-5">
@@ -187,6 +188,25 @@ function HostSide({ code, seats }: { code: string | null; seats: RoomSeats }) {
             复制
           </button>
         </div>
+
+        <div className="mt-4 flex items-center gap-2">
+          <input
+            readOnly
+            value={watchLink}
+            className="h-9 min-w-0 flex-1 rounded-control border border-line bg-raised px-3 text-xs font-mono text-muted"
+            data-testid="watch-link"
+          />
+          <button
+            className="btn btn-secondary btn-sm shrink-0"
+            onClick={() => {
+              navigator.clipboard?.writeText(watchLink)
+            }}
+            data-testid="copy-watch-link"
+          >
+            复制观战链接
+          </button>
+        </div>
+        <p className="mt-1.5 text-[12px] text-faint">发给朋友，他们可以只看牌不上桌</p>
 
         <div className="mt-4 flex items-center gap-2">
           <span className="text-sm text-muted">AI 难度</span>

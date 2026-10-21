@@ -5,7 +5,7 @@ const PATHS: Record<number, string> = {
   3: 'M12 2.6 20.5 12 12 21.4 3.5 12 12 2.6Z',
 }
 
-/** 花色用矢量画，不用字体里的符号——不同系统渲染不一致，也会被当成表情。 */
+/** 花色用矢量画，不用字体里的符号：不同系统渲染不一致，也会被当成表情。 */
 export function Suit({
   suit,
   className,

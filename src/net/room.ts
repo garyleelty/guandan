@@ -21,11 +21,12 @@ export function codeFromUrl(): string | null {
 }
 
 export type Msg =
-  /** 客人打招呼：带一个本机记住的 token，刷新页面后能坐回原座 */
-  | { t: 'hello'; name: string; token?: string }
+  /** 客人打招呼：带一个本机记住的 token，刷新页面后能坐回原座；watch = 只看牌不上桌 */
+  | { t: 'hello'; name: string; token?: string; watch?: boolean }
   | {
       t: 'welcome'
-      seat: Seat
+      /** -1 表示观战（不上桌） */
+      seat: Seat | -1
       /** 各座信息（名字 + 身份），客人据此画等候室 */
       seats: { seat: Seat; name: string; kind: 'host' | 'guest' | 'ai' | 'empty' }[]
       reconnected?: boolean

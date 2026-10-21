@@ -4,6 +4,7 @@ import { peerIdOf, codeFromUrl } from './room'
 import type { Msg } from './room'
 import { useStore } from '../state/store'
 import type { SerializedState } from './room'
+import type { Seat } from '../core/engine'
 
 /** SerializedState → GameState 形状（为 UI 渲染的同一形状；guest 不做本地 step，仅渲染/发 intent） */
 export function deserialized(s: SerializedState): any {
@@ -23,19 +24,31 @@ export function guestToken(): string {
   return t
 }
 
-export function joinRoom(codeOrUrl?: string): 'bad-code' | 'connecting' | 'started' {
+export function joinRoom(codeOrUrl?: string, opts?: { watch?: boolean }): 'bad-code' | 'connecting' | 'started' {
   const code = (codeOrUrl ?? codeFromUrl())?.toUpperCase()
   if (!code || !/^[2-9A-HJKMNP-Z]{6}$/.test(code)) {
     return 'bad-code'
   }
   const peer = new Peer()
   guestPeer = peer
-  useStore.setState({ screen: 'room', mode: 'guest', roomCode: code, joining: true, roomSeats: null })
+  useStore.setState({
+    screen: 'room',
+    mode: 'guest',
+    roomCode: code,
+    joining: true,
+    roomSeats: null,
+    spectating: opts?.watch === true,
+  })
   peer.on('open', () => {
     const conn = peer.connect(peerIdOf(code), { reliable: true })
     guestConn = conn
     conn.on('open', () => {
-      conn.send({ t: 'hello', name: localStorage.getItem('gd-nick') || '玩家', token: guestToken() } satisfies Msg)
+      conn.send({
+        t: 'hello',
+        name: localStorage.getItem('gd-nick') || '玩家',
+        token: guestToken(),
+        watch: opts?.watch === true,
+      } satisfies Msg)
       useStore.setState({ joining: false, intentSink: (a) => conn.send({ t: 'intent', action: a } satisfies Msg), teardown: leaveGuest })
       ;(window as unknown as Record<string, unknown>).__gdGuest = { conn, seat: null }
     })
@@ -49,8 +62,11 @@ export function joinRoom(codeOrUrl?: string): 'bad-code' | 'connecting' | 'start
 
 function guestHandle(msg: Msg): void {
   if (msg.t === 'welcome') {
+    const seat = msg.seat
+    const spectating = seat === -1
     useStore.setState({
-      mySeat: msg.seat,
+      mySeat: spectating ? 0 : (seat as Seat),
+      spectating,
       roomSeats: msg.seats.map((s) => ({ seat: s.seat, name: s.name, kind: s.kind })) as never,
       reconnected: msg.reconnected === true,
     })

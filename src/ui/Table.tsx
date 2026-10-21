@@ -23,7 +23,8 @@ const COMBO_LABEL: Record<number, string> = {
 const FINISH_LABEL = ['头游', '二游', '三游', '四游']
 
 /** 掼蛋的座次：我 → 下家 → 搭档 → 上家。 */
-function roleOf(seat: Seat, mySeat: Seat): string {
+function roleOf(seat: Seat, mySeat: Seat, spectating?: boolean): string {
+  if (spectating) return `${seat + 1} 号位`
   if (seat === mySeat) return '我'
   if (seat === (mySeat + 1) % 4) return '下家'
   if (seat === (mySeat + 2) % 4) return '搭档'
@@ -43,7 +44,17 @@ function CardBacks({ n }: { n: number }) {
   )
 }
 
-function SeatPanel({ st, seat, mySeat }: { st: GameState; seat: Seat; mySeat: Seat }) {
+function SeatPanel({
+  st,
+  seat,
+  mySeat,
+  spectating,
+}: {
+  st: GameState
+  seat: Seat
+  mySeat: Seat
+  spectating?: boolean
+}) {
   const p = st.players[seat]!
   const isTurn = st.turn === seat && st.phase === 'playing'
   const mine = teamOf(seat) === teamOf(mySeat)
@@ -58,12 +69,12 @@ function SeatPanel({ st, seat, mySeat }: { st: GameState; seat: Seat; mySeat: Se
       </div>
       <div className="mt-1 flex items-center gap-1.5">
         <span className="text-[13px] text-muted">
-          {roleOf(seat, mySeat)} · <span className="num">{p.hand.length}</span> 张
+          {roleOf(seat, mySeat, spectating)} · <span className="num">{p.hand.length}</span> 张
         </span>
         {low && <span className="chip bg-accent/15 text-accent">报牌</span>}
         {p.finishOrder !== null && <span className="chip">{FINISH_LABEL[p.finishOrder]}</span>}
       </div>
-      {seat !== mySeat && <CardBacks n={p.hand.length} />}
+      {(spectating || seat !== mySeat) && <CardBacks n={p.hand.length} />}
     </div>
   )
 }
@@ -150,6 +161,7 @@ export function Table() {
   const mode = useStore((s) => s.mode)
   const roomCode = useStore((s) => s.roomCode)
   const reconnected = useStore((s) => s.reconnected)
+  const spectating = useStore((s) => s.spectating)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [handMode, setHandMode] = useState<'rank' | 'suit'>('rank')
   const [handView, setHandView] = useState<'row' | 'grid'>('row')
@@ -285,7 +297,7 @@ export function Table() {
     : null
   /** 出牌从哪个方向落到桌心：自己 / 搭档 / 左家 / 右家 */
   const landClass = (() => {
-    if (!table) return 'animate-pop'
+    if (!table || spectating) return 'animate-pop'
     const rel = (table.seat - mySeat + 4) % 4
     if (rel === 0) return 'animate-land-bottom'
     if (rel === 2) return 'animate-land-top'
@@ -305,9 +317,14 @@ export function Table() {
               <LevelCard level={levelRank} />
               <span className="text-[13px] text-muted">级牌</span>
             </div>
-            <LevelLadder mine={myLevel} theirs={theirLevel} />
+            {!spectating && <LevelLadder mine={myLevel} theirs={theirLevel} />}
           </div>
           <span className="chip">{mode === 'solo' ? '单机' : `房间 ${roomCode ?? ''}`}</span>
+          {spectating && (
+            <span className="chip bg-accent/15 text-accent" data-testid="spectating">
+              观战
+            </span>
+          )}
           {reconnected && (
             <span className="chip bg-accent/15 text-accent" data-testid="reconnected">
               已重新连接
@@ -326,25 +343,35 @@ export function Table() {
       </header>
 
       <main className="flex min-h-0 flex-1 flex-col px-4 pt-3">
-        {/* 座位：上家 · 搭档 · 下家 */}
-        <div className="grid grid-cols-3 items-start gap-2 sm:gap-3">
-          <div className="justify-self-start">
-            <SeatPanel st={st} seat={prev.seat} mySeat={mySeat} />
+        {/* 座位：上家 · 搭档 · 下家（观战时四个座位都摆出来） */}
+        {spectating ? (
+          <div className="grid grid-cols-2 items-start gap-2 sm:grid-cols-4 sm:gap-3">
+            {st.players.map((p) => (
+              <SeatPanel key={p.seat} st={st} seat={p.seat} mySeat={mySeat} spectating />
+            ))}
           </div>
-          <div className="justify-self-center">
-            <SeatPanel st={st} seat={partner.seat} mySeat={mySeat} />
+        ) : (
+          <div className="grid grid-cols-3 items-start gap-2 sm:gap-3">
+            <div className="justify-self-start">
+              <SeatPanel st={st} seat={prev.seat} mySeat={mySeat} />
+            </div>
+            <div className="justify-self-center">
+              <SeatPanel st={st} seat={partner.seat} mySeat={mySeat} />
+            </div>
+            <div className="justify-self-end">
+              <SeatPanel st={st} seat={next.seat} mySeat={mySeat} />
+            </div>
           </div>
-          <div className="justify-self-end">
-            <SeatPanel st={st} seat={next.seat} mySeat={mySeat} />
-          </div>
-        </div>
+        )}
 
         {/* 记录条：出过什么 · 对手还可能有什么 */}
         <div className="mt-3 flex flex-col gap-1.5 border-y border-rule py-2 sm:flex-row sm:items-center sm:gap-4">
           <RoundLog st={st} />
-          <div className="w-full min-w-0 sm:ml-auto sm:w-auto">
-            <UnseenCards st={st} myHand={me.hand} />
-          </div>
+          {!spectating && (
+            <div className="w-full min-w-0 sm:ml-auto sm:w-auto">
+              <UnseenCards st={st} myHand={me.hand} />
+            </div>
+          )}
         </div>
 
         {/* 牌桌中央 */}
@@ -392,6 +419,12 @@ export function Table() {
 
       {/* 我的操作区 */}
       <footer className="shrink-0 border-t border-line px-4 pt-2">
+        {spectating ? (
+          <p className="py-3 text-center text-[13px] text-faint">
+            正在观战，这一局由桌上的人打
+          </p>
+        ) : (
+          <>
         <div className="flex flex-wrap items-center gap-2">
           <span className="chip" data-testid="hand-count">
             我的牌 <span className="num">{me.hand.length}</span> 张
@@ -493,6 +526,8 @@ export function Table() {
             return !(c1 && beats(c1, table.combo))
           }}
         />
+          </>
+        )}
       </footer>
     </div>
   )

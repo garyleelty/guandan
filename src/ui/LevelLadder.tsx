@@ -3,7 +3,7 @@ import { levelLabel } from '../core/cards'
 const STEPS = 13 // 2 … A
 const STEP_NAMES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
 
-/** 级牌：打几级就画一张那个点的小白牌——掼蛋自己的东西。 */
+/** 级牌：打几级就画一张那个点的小白牌，掼蛋自己的东西。 */
 export function LevelCard({ level }: { level: number }) {
   return (
     <div className="flex h-[30px] w-[22px] items-center justify-center rounded-[4px] border border-black/10 bg-card text-[13px] font-bold text-card-ink">
@@ -40,7 +40,7 @@ export function LevelTrack({
   )
 }
 
-/** 级牌阶梯：两队各一条轨——签名元素，升级进度一眼可见。 */
+/** 级牌阶梯：两队各一条轨，签名元素，升级进度一眼可见。 */
 export function LevelLadder({
   mine,
   theirs,

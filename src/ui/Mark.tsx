@@ -1,4 +1,4 @@
-/** 产品标记：一张牌里的一枚黑桃——掼蛋自己的东西，不是通用字标。 */
+/** 产品标记：一张牌里的一枚黑桃，掼蛋自己的东西，不是通用字标。 */
 export function Mark({ size = 20 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 20 20" aria-hidden="true" className="shrink-0">

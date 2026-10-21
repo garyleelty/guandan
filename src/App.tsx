@@ -32,7 +32,9 @@ export default function App() {
     const r = codeFromUrl()
     if (r && useStore.getState().screen === 'lobby') {
       useStore.setState({ mode: 'guest', screen: 'room' })
-      joinRoom(r)
+      // ?watch=1 只看牌不上桌（观战）
+      const watch = new URLSearchParams(window.location.search).get('watch') === '1'
+      joinRoom(r, { watch })
       return
     }
     // ?solo=1 直达牌桌（分享单机局 / 验收截图用）
