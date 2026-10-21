@@ -1,6 +1,6 @@
-import { RANK, deal, levelToRank, newShuffledDeck, sortCards } from './cards'
+import { RANK, deal, isWild, levelToRank, newShuffledDeck, sortCards } from './cards'
 import type { Card } from './cards'
-import { identify, beats } from './combos'
+import { identify, beats, straightWindows } from './combos'
 import type { Combo } from './combos'
 
 export type Team = 'even' | 'odd'
@@ -424,6 +424,61 @@ function canonPick(cards: Card[], n: number): Card[] {
   return [...cards].sort((a, b) => a.suit - b.suit || a.id.localeCompare(b.id)).slice(0, n)
 }
 
+/**
+ * 逢人配（红桃级牌）能凑出的牌型：与同点牌成组、补顺子的一格、三带二/连对/钢板。
+ * 具体替代成什么点数由 identify 决定，这里只负责把「该有哪些牌」列出来。
+ */
+function wildCandidates(hand: Card[], level: number): Card[][] {
+  const out: Card[][] = []
+  const wilds = hand.filter((c) => isWild(c, level))
+  if (wilds.length === 0) return out
+  const levelRank = levelToRank(level)
+  const windows = straightWindows()
+
+  for (const w of wilds) {
+    const rest = hand.filter((c) => c.id !== w.id)
+    const byRank = new Map<number, Card[]>()
+    for (const c of rest) {
+      const arr = byRank.get(c.rank) ?? []
+      arr.push(c)
+      byRank.set(c.rank, arr)
+    }
+    // 与同点牌成组：对子 / 三张 / 炸弹
+    for (const [r, cs] of byRank) {
+      if (r === levelRank) continue // 级牌那组走常规生成
+      for (let k = 1; k <= Math.min(cs.length, 7); k++) out.push([w, ...cs.slice(0, k)])
+    }
+    // 补顺子的一格（含同花顺）
+    for (const win of windows) {
+      const missing = win.filter((r) => !byRank.has(r))
+      if (missing.length !== 1) continue
+      const cards = win.filter((r) => byRank.has(r)).map((r) => byRank.get(r)![0]!)
+      out.push([w, ...cards])
+      for (const suit of [0, 1, 2, 3]) {
+        const flush = win.map((r) => byRank.get(r)?.find((c) => c.suit === suit)).filter(Boolean) as Card[]
+        if (flush.length === 4) out.push([w, ...flush])
+      }
+    }
+    // 三带二 / 连对：万能配 + 两对
+    const pairRanks = [...byRank.entries()].filter(([, cs]) => cs.length >= 2).map(([r]) => r)
+    for (const p1 of pairRanks) {
+      for (const p2 of pairRanks) {
+        if (p1 === p2) continue
+        out.push([w, ...byRank.get(p1)!.slice(0, 2), ...byRank.get(p2)!.slice(0, 2)])
+      }
+    }
+    // 钢板：万能配 + 两组三张
+    const tripleRanks = [...byRank.entries()].filter(([, cs]) => cs.length >= 3).map(([r]) => r)
+    for (const t1 of tripleRanks) {
+      for (const t2 of tripleRanks) {
+        if (t1 === t2) continue
+        out.push([w, ...byRank.get(t1)!.slice(0, 3), ...byRank.get(t2)!.slice(0, 3)])
+      }
+    }
+  }
+  return out
+}
+
 export function legalMoves(st: GameState, seat: Seat): Combo[] {
   const hand = st.players[seat]!.hand
   const byRank = new Map<number, Card[]>()
@@ -516,6 +571,9 @@ export function legalMoves(st: GameState, seat: Seat): Combo[] {
       out.push(seqRanks.flatMap((r) => canonPick(byRank.get(r)!, 3)))
     }
   }
+
+  // 逢人配能凑出的牌型
+  out.push(...wildCandidates(hand, st.handLevel))
 
   const combos: Combo[] = []
   for (const cards of out) {

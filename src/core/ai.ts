@@ -2,7 +2,7 @@ import { teamOf, legalMoves, canAntiTribute } from './engine'
 import type { Action, GameState, Seat } from './engine'
 import { ComboType } from './combos'
 import type { Combo } from './combos'
-import { RANK, effectiveRank } from './cards'
+import { RANK, effectiveRank, isWild } from './cards'
 import type { Card } from './cards'
 
 const SPECIAL = new Set<number>([ComboType.BOMB, ComboType.SFLUSH, ComboType.JOKERS])
@@ -52,9 +52,12 @@ function breakPenalty(combo: Combo, shape: Map<number, number>, level: number): 
   return penalty
 }
 
-/** 打出的牌值多少点——大牌更贵（按比较值，级牌最贵）。 */
+/**
+ * 打出的牌值多少点——大牌更贵（按比较值，级牌最贵）。
+ * 逢人配（红桃级牌）比普通级牌更灵活，额外加价，AI 不轻易甩掉。
+ */
 function valueOf(cards: Card[], level: number): number {
-  return cards.reduce((sum, c) => sum + effectiveRank(c, level), 0)
+  return cards.reduce((sum, c) => sum + effectiveRank(c, level) + (isWild(c, level) ? 30 : 0), 0)
 }
 
 function pickCheapest(moves: Combo[], shape: Map<number, number>, lead: boolean, level: number): Combo | null {

@@ -70,11 +70,17 @@ export function Hand({
             >
               <div className="relative">
                 <CardFace card={c} size="sm" selected={selected.has(c.id)} dim={dimmed?.(c)} />
-                {c.rank === levelCardRank && (
-                  <span className="absolute -top-1.5 -right-1.5 flex h-[17px] w-[17px] items-center justify-center rounded-full bg-accent text-[11px] font-bold text-black">
-                    级
-                  </span>
-                )}
+                {c.rank === levelCardRank &&
+                  (c.suit === 1 ? (
+                    // 逢人配：红桃级牌
+                    <span className="absolute -top-1.5 -right-1.5 flex h-[17px] w-[17px] items-center justify-center rounded-full bg-ink text-[11px] font-bold text-black">
+                      配
+                    </span>
+                  ) : (
+                    <span className="absolute -top-1.5 -right-1.5 flex h-[17px] w-[17px] items-center justify-center rounded-full bg-accent text-[11px] font-bold text-black">
+                      级
+                    </span>
+                  ))}
               </div>
             </button>
           ))}
@@ -98,11 +104,17 @@ export function Hand({
           >
             <div className="animate-deal">
               <CardFace card={c} size={tier.size} selected={selected.has(c.id)} dim={dimmed?.(c)} />
-              {c.rank === levelCardRank && (
-                <span className="absolute -top-1.5 -right-1.5 flex h-[17px] w-[17px] items-center justify-center rounded-full bg-accent text-[11px] font-bold text-black">
-                  级
-                </span>
-              )}
+              {c.rank === levelCardRank &&
+                (c.suit === 1 ? (
+                  // 逢人配：红桃级牌
+                  <span className="absolute -top-1.5 -right-1.5 flex h-[17px] w-[17px] items-center justify-center rounded-full bg-ink text-[11px] font-bold text-black">
+                    配
+                  </span>
+                ) : (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-[17px] w-[17px] items-center justify-center rounded-full bg-accent text-[11px] font-bold text-black">
+                    级
+                  </span>
+                ))}
             </div>
           </button>
         ))}

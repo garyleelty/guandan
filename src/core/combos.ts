@@ -1,4 +1,4 @@
-import { RANK, effectiveRank } from './cards'
+import { RANK, effectiveRank, isWild } from './cards'
 import type { Card } from './cards'
 
 export const ComboType = {
@@ -48,11 +48,85 @@ function straightRank(cards: Card[]): number | null {
   return r[r.length - 1]!
 }
 
+/** 牌型强弱（只用于万能牌多解时挑一个合理解释）。 */
+const TYPE_STRENGTH: Record<number, number> = {
+  [ComboType.SINGLE]: 0,
+  [ComboType.PAIR]: 1,
+  [ComboType.TRIPLE]: 1,
+  [ComboType.TRIPLE_PAIR]: 1,
+  [ComboType.STRAIGHT]: 2,
+  [ComboType.PAIRS]: 2,
+  [ComboType.PLATE]: 2,
+  [ComboType.BOMB]: 3,
+  [ComboType.SFLUSH]: 4,
+  [ComboType.JOKERS]: 5,
+}
+
+/** 五连的窗口（自然点数）：2-6 … 10-A，以及 A 当 1 的 A-2-3-4-5。 */
+export function straightWindows(): number[][] {
+  const out: number[][] = []
+  for (let lo = RANK.TWO; lo <= 10; lo++) out.push([lo, lo + 1, lo + 2, lo + 3, lo + 4])
+  out.push([RANK.ACE, RANK.TWO, 3, 4, 5])
+  return out
+}
+
 /**
  * 识别牌型。level = 本局级数（2..14）：级数对应的点数牌按 RANK.LEVEL 比较（大于 A、小于王），
  * 但在顺子里仍按原点数算。
+ *
+ * 逢人配（红桃级牌）：可以当任意牌点（除大小王）搭配使用；单出时只算普通级牌。
  */
 export function identify(cards: Card[], level: number): Combo | null {
+  const wilds = cards.filter((c) => isWild(c, level))
+  if (wilds.length === 0) return identifyPlain(cards, level)
+  if (cards.length === 1) return identifyPlain(cards, level) // 单出：只算普通级牌
+
+  // 枚举万能牌的替代：点数 2..A（花色沿用自身），同花顺另走特例
+  const combos: Combo[] = []
+  const rankOptions: number[] = []
+  for (let r = RANK.TWO; r <= RANK.ACE; r++) rankOptions.push(r)
+  if (wilds.length === 1) {
+    const w = wilds[0]!
+    for (const r of rankOptions) {
+      const sub = cards.map((c) => (c.id === w.id ? { ...c, rank: r } : c))
+      const combo = identifyPlain(sub, level)
+      // 解释用替代后的牌点，但交出去的仍是原牌
+      if (combo) combos.push({ ...combo, cards })
+    }
+    // 同花顺：万能配补上同花色的那一张
+    if (cards.length === 5) {
+      const others = cards.filter((c) => c.id !== w.id)
+      const suits = new Set(others.map((c) => c.suit))
+      if (suits.size === 1) {
+        const suit = [...suits][0]!
+        for (const win of straightWindows()) {
+          const missing = win.find((r) => !others.some((c) => c.rank === r))
+          if (missing === undefined) continue
+          const sub = cards.map((c) => (c.id === w.id ? { ...c, rank: missing, suit } : c))
+          const combo = identifyPlain(sub, level)
+          if (combo) combos.push({ ...combo, cards })
+        }
+      }
+    }
+  } else {
+    // 两张万能配：先按同点替代（成对子/三张/炸弹）
+    for (const r of rankOptions) {
+      const sub = cards.map((c) => (isWild(c, level) ? { ...c, rank: r } : c))
+      const combo = identifyPlain(sub, level)
+      if (combo) combos.push({ ...combo, cards })
+    }
+  }
+  if (combos.length === 0) return identifyPlain(cards, level)
+  // 多解时：牌型强的优先，同型取点数大的
+  return combos.reduce((best, c) => {
+    const bs = TYPE_STRENGTH[best.type] ?? 0
+    const cs = TYPE_STRENGTH[c.type] ?? 0
+    if (cs !== bs) return cs > bs ? c : best
+    return c.rank > best.rank ? c : best
+  })
+}
+
+function identifyPlain(cards: Card[], level: number): Combo | null {
   const n = cards.length
   if (n === 0 || n > 24) return null
 
@@ -109,22 +183,26 @@ export function identify(cards: Card[], level: number): Combo | null {
   }
 
   // 顺系：每组数量一致且比较值连续（级牌那一组不与相邻点数连续）
+  // A 在连对/钢板里可当 1（最小者），也可当 K+1
   const per = groups.map((g) => g.cards.length)
   const allSame = per.every((c) => c === per[0])
+  const lowAce = groups[0]!.rank === RANK.TWO && groups.some((g) => g.rank === RANK.ACE)
+  const val = (r: number) => (lowAce && r === RANK.ACE ? 1 : r)
   const consecutive = (gs: Group[]) => {
     for (let i = 1; i < gs.length; i++) {
-      if (gs[i]!.rank !== gs[i - 1]!.rank + 1) return false
+      if (val(gs[i]!.rank) !== val(gs[i - 1]!.rank) + 1) return false
     }
     return true
   }
+  const top = val(groups[groups.length - 1]!.rank)
 
   if (allSame && consecutive(groups)) {
     const size = per[0]!
     if (size === 2 && groups.length >= 3) {
-      return { type: ComboType.PAIRS, rank: groups[groups.length - 1]!.rank, count: groups.length, cards }
+      return { type: ComboType.PAIRS, rank: top, count: groups.length, cards }
     }
     if (size === 3 && groups.length >= 2) {
-      return { type: ComboType.PLATE, rank: groups[groups.length - 1]!.rank, count: groups.length, cards }
+      return { type: ComboType.PLATE, rank: top, count: groups.length, cards }
     }
   }
   return null
@@ -139,9 +217,14 @@ export function beats(a: Combo, b: Combo): boolean {
   const aIsBomb = a.type === ComboType.BOMB
   const bIsBomb = b.type === ComboType.BOMB
 
-  if (aIsSf) return !bIsSf || (bIsSf && a.rank > b.rank)
+  if (aIsSf) {
+    if (bIsSf) return a.rank > b.rank
+    // 同花顺压五张及以下的炸弹，六张及以上的炸弹反压同花顺
+    if (bIsBomb) return (b.count ?? 0) <= 5
+    return true
+  }
   if (aIsBomb) {
-    if (bIsSf) return false
+    if (bIsSf) return (a.count ?? 0) >= 6
     if (bIsBomb) return a.count! > b.count! || (a.count === b.count && a.rank > b.rank)
     return true
   }

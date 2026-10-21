@@ -136,10 +136,11 @@ describe('beats', () => {
     expect(beatsOf(['K', 'K', 'K', 'K'], ['2', '2', '2', '2', '2'])).toBe(false)
     expect(beatsOf(['2', '2', '2', '2', '2', '2', '2', '2'], ['A', 'A', 'A', 'A'])).toBe(true)
   })
-  it('同花顺压炸弹；同花顺之间比大小', () => {
+  it('同花顺压五张及以下的炸弹；六张及以上炸弹反压同花顺', () => {
     const sf = ['5♦', '6♦', '7♦', '8♦', '9♦']
-    expect(beatsOf(sf, ['3', '3', '3', '3', '3', '3', '3', '3'])).toBe(true)
-    expect(beatsOf(['3', '3', '3', '3', '3', '3', '3', '3'], sf)).toBe(false)
+    expect(beatsOf(sf, ['3', '3', '3', '3', '3'])).toBe(true) // 5 张炸压不过同花顺
+    expect(beatsOf(sf, ['3', '3', '3', '3', '3', '3'])).toBe(false) // 6 张炸压过同花顺
+    expect(beatsOf(['3', '3', '3', '3', '3', '3'], sf)).toBe(true)
     expect(beatsOf(sf, ['6♦', '7♦', '8♦', '9♦', '10♦'])).toBe(false)
     expect(beatsOf(['6♦', '7♦', '8♦', '9♦', '10♦'], sf)).toBe(true)
   })

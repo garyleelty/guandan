@@ -86,6 +86,11 @@ export function isLevelCard(c: Card, level: number): boolean {
   return c.rank === levelToRank(level)
 }
 
+/** 逢人配：红桃花色的级牌，可以当任意牌点（除大小王）搭配使用。 */
+export function isWild(c: Card, level: number): boolean {
+  return c.suit === SUIT.HEART && c.rank === levelToRank(level)
+}
+
 /** 牌在本局的比较值：级牌按 15 算，其余按原点数。 */
 export function effectiveRank(c: Card, level: number): number {
   return isLevelCard(c, level) ? RANK.LEVEL : c.rank

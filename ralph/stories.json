@@ -300,6 +300,43 @@
         }
       ],
       "status": "done"
+    },
+    {
+      "id": "S13",
+      "title": "逢人配 + 炸系层级修正",
+      "criteria": [
+        {
+          "id": "S13-1",
+          "desc": "逢人配：红桃级牌可当任意牌点（除大小王）搭配成牌型，单出时只算普通级牌",
+          "check": "cmd"
+        },
+        {
+          "id": "S13-2",
+          "desc": "identify 枚举万能配替代；legalMoves 生成万能配能凑的牌型；交出的是原牌",
+          "check": "cmd"
+        },
+        {
+          "id": "S13-3",
+          "desc": "A 在连对/钢板里可当 1（最小）或 K+1（最大）",
+          "check": "cmd"
+        },
+        {
+          "id": "S13-4",
+          "desc": "炸系层级修正：同花顺压五张及以下炸弹，六张及以上炸弹压同花顺",
+          "check": "cmd"
+        },
+        {
+          "id": "S13-5",
+          "desc": "UI：红桃级牌标「配」角标；AI 给逢人配额外加价不轻易甩",
+          "check": "manual"
+        },
+        {
+          "id": "S13-6",
+          "desc": "验收：113 tests + 真浏览器单机/进贡 + inspect 0 FAIL 0 WARN",
+          "check": "cmd"
+        }
+      ],
+      "status": "done"
     }
   ]
 }
