@@ -418,6 +418,33 @@
         }
       ],
       "status": "done"
+    },
+    {
+      "id": "S17",
+      "title": "客人断线重连（凭本机 token 坐回原座）",
+      "criteria": [
+        {
+          "id": "S17-1",
+          "desc": "客人本机记 token，握手时带上；房主按 token 认领原座（断线后座位变 AI/空位也不丢）",
+          "check": "cmd"
+        },
+        {
+          "id": "S17-2",
+          "desc": "重连后收回座位控制权（AI 不再替这个人打），牌桌提示「已重新连接」",
+          "check": "cmd"
+        },
+        {
+          "id": "S17-3",
+          "desc": "真浏览器验证：房内刷新与牌局中刷新都坐回原座，座位不重复",
+          "check": "cmd"
+        },
+        {
+          "id": "S17-4",
+          "desc": "验收：122 tests + inspect 0 FAIL 0 WARN + lint 0 FAIL",
+          "check": "cmd"
+        }
+      ],
+      "status": "done"
     }
   ]
 }

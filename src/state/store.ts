@@ -27,6 +27,8 @@ interface Store {
   roomSeats: RoomSeatLite[] | null
   joining: boolean
   guestLost: boolean
+  /** 断线重连后回到牌桌：给玩家一句提示 */
+  reconnected: boolean
   intentSink: ((a: Action) => void) | null
   afterDispatch: (() => void) | null
   teardown: (() => void) | null
@@ -48,6 +50,7 @@ export const useStore = create<Store>((set, get) => ({
   roomSeats: null,
   joining: false,
   guestLost: false,
+  reconnected: false,
   intentSink: null,
   afterDispatch: null,
   teardown: null,

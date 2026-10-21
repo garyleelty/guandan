@@ -21,8 +21,9 @@ export function codeFromUrl(): string | null {
 }
 
 export type Msg =
-  | { t: 'hello'; name: string }
-  | { t: 'welcome'; seat: Seat; names: (string | null)[] }
+  /** 客人打招呼：带一个本机记住的 token，刷新页面后能坐回原座 */
+  | { t: 'hello'; name: string; token?: string }
+  | { t: 'welcome'; seat: Seat; names: (string | null)[]; reconnected?: boolean }
   | { t: 'state'; state: SerializedState; seat: Seat }
   | { t: 'intent'; action: Action }
   | { t: 'start' }

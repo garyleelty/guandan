@@ -146,6 +146,7 @@ export function Table() {
   const dispatch = useStore((s) => s.dispatch)
   const mode = useStore((s) => s.mode)
   const roomCode = useStore((s) => s.roomCode)
+  const reconnected = useStore((s) => s.reconnected)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [handMode, setHandMode] = useState<'rank' | 'suit'>('rank')
   const [handView, setHandView] = useState<'row' | 'grid'>('row')
@@ -290,6 +291,11 @@ export function Table() {
             <LevelLadder mine={myLevel} theirs={theirLevel} />
           </div>
           <span className="chip">{mode === 'solo' ? '单机' : `房间 ${roomCode ?? ''}`}</span>
+          {reconnected && (
+            <span className="chip bg-accent/15 text-accent" data-testid="reconnected">
+              已重新连接
+            </span>
+          )}
           <button
             className="btn btn-ghost !px-2"
             title={mute ? '开启音效' : '静音'}

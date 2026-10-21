@@ -13,6 +13,16 @@ export function deserialized(s: SerializedState): any {
 let guestConn: DataConnection | null = null
 let guestPeer: Peer | null = null
 
+/** 本机记住的 token：刷新页面后凭它坐回原座。 */
+export function guestToken(): string {
+  let t = localStorage.getItem('gd-token')
+  if (!t) {
+    t = Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4)
+    localStorage.setItem('gd-token', t)
+  }
+  return t
+}
+
 export function joinRoom(codeOrUrl?: string): 'bad-code' | 'connecting' | 'started' {
   const code = (codeOrUrl ?? codeFromUrl())?.toUpperCase()
   if (!code || !/^[2-9A-HJKMNP-Z]{6}$/.test(code)) {
@@ -25,7 +35,7 @@ export function joinRoom(codeOrUrl?: string): 'bad-code' | 'connecting' | 'start
     const conn = peer.connect(peerIdOf(code), { reliable: true })
     guestConn = conn
     conn.on('open', () => {
-      conn.send({ t: 'hello', name: localStorage.getItem('gd-nick') || '玩家' } satisfies Msg)
+      conn.send({ t: 'hello', name: localStorage.getItem('gd-nick') || '玩家', token: guestToken() } satisfies Msg)
       useStore.setState({ joining: false, intentSink: (a) => conn.send({ t: 'intent', action: a } satisfies Msg), teardown: leaveGuest })
       ;(window as unknown as Record<string, unknown>).__gdGuest = { conn, seat: null }
     })
@@ -39,7 +49,11 @@ export function joinRoom(codeOrUrl?: string): 'bad-code' | 'connecting' | 'start
 
 function guestHandle(msg: Msg): void {
   if (msg.t === 'welcome') {
-    useStore.setState({ mySeat: msg.seat, roomSeats: msg.names.map((n, i) => ({ seat: i as any, name: n ?? '' })) as never })
+    useStore.setState({
+      mySeat: msg.seat,
+      roomSeats: msg.names.map((n, i) => ({ seat: i as any, name: n ?? '' })) as never,
+      reconnected: msg.reconnected === true,
+    })
     return
   }
   if (msg.t === 'state') {

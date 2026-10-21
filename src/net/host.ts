@@ -11,6 +11,8 @@ export interface RoomSeat {
   name: string
   kind: 'host' | 'guest' | 'ai' | 'empty'
   connId: string | null
+  /** 客人本机的 token：刷新页面后凭它认领原座 */
+  token?: string
 }
 
 export interface HostRoom {
@@ -66,17 +68,35 @@ function hostHandle(conn: DataConnection, msg: Msg): void {
     return
   }
   if (msg.t !== 'hello') return
-  const seat = ([1, 2, 3] as Seat[]).find((s) => r.seats[s]!.kind === 'empty')
-  if (seat === undefined) {
-    conn.send({ t: 'leave' } satisfies Msg)
-    conn.close()
-    return
-  }
+  // 认领原座：同一个 token 再来（刷新页面、断线重连）就还是那个座位
+  const token = msg.token
+  // 房主座位没有 token；客人座位断线后会变空位/AI，但 token 留着，好让重连认领
+  const mine = token ? r.seats.find((s) => s.token === token) : undefined
   let name = (msg.name || '玩家').slice(0, 8)
   if (usedName(r, name)) name = `${name}2`
   r.usedNames.add(name)
-  r.seats[seat] = { seat, kind: 'guest', name, connId: conn.peer }
-  conn.send({ t: 'welcome', seat, names: r.seats.map((s) => (s.kind === 'empty' ? null : s.name)) } satisfies Msg)
+  let seat: Seat | undefined
+  let reconnected = false
+  if (mine) {
+    seat = mine.seat
+    reconnected = true
+    r.seats[seat] = { seat, kind: 'guest', name: mine.name || name, connId: conn.peer, token }
+    if (r.match) r.match.players[seat]!.isBot = false
+  } else {
+    seat = ([1, 2, 3] as Seat[]).find((s) => r.seats[s]!.kind === 'empty')
+    if (seat === undefined) {
+      conn.send({ t: 'leave' } satisfies Msg)
+      conn.close()
+      return
+    }
+    r.seats[seat] = { seat, kind: 'guest', name, connId: conn.peer, token }
+  }
+  conn.send({
+    t: 'welcome',
+    seat,
+    names: r.seats.map((s) => (s.kind === 'empty' ? null : s.name)),
+    reconnected,
+  } satisfies Msg)
   useStore.setState({ roomSeats: [...r.seats] })
   if (r.match) broadcastState()
 }
@@ -90,9 +110,11 @@ function hostDrop(conn: DataConnection): void {
   if (!r) return
   const seat = r.seats.find((s) => s.connId === conn.peer)
   if (!seat) return
+  const wasGuest = seat.kind === 'guest'
   seat.kind = r.match ? 'ai' : 'empty'
   seat.name = r.match ? `${seat.name}(AI)` : ''
   seat.connId = null
+  if (!wasGuest) seat.token = undefined
   if (r.match) {
     const p = r.match.players[seat.seat]!
     p.isBot = true
