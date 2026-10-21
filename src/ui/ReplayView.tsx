@@ -30,7 +30,7 @@ export function ReplayView({ data }: { data: ReplayData }) {
   }
   const breakdown = [...counts.entries()]
     .sort((a, b) => b[1] - a[1])
-    .map(([t, n]) => `${COMBO_LABEL[t] ?? ''} ${n}`)
+    .map(([t, n]) => `${COMBO_LABEL[t] ?? ''} ${n} 次`)
     .join(' · ')
 
   return (
@@ -50,6 +50,10 @@ export function ReplayView({ data }: { data: ReplayData }) {
           级数 {data.l[0]} : {data.l[1]}
         </span>
       </div>
+
+      {breakdown && (
+        <p className="mt-2 text-[13px] text-muted">牌型分布：{breakdown}</p>
+      )}
 
       {rounds.length > 1 && (
         <div className="mt-3 flex flex-wrap gap-1.5" data-testid="replay-rounds">

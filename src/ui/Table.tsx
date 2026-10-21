@@ -556,7 +556,9 @@ function EndOverlay({ onRematch, onLobby }: { onRematch: () => void; onLobby: ()
   const mode = useStore((s) => s.mode)
   const winner = st.players.find((p) => p.finishOrder === 0)!
   const isMatch = st.matchWinner !== null
-  const title = isMatch ? `${winner.name} 队拿下整场` : `${winner.name} 队升级`
+  // 标题用「我方 / 对家」：一队有两个人，只报一个名字会让人以为那是单人队伍
+  const winnerIsMine = teamOf(winner.seat) === teamOf(mySeat)
+  const title = `${winnerIsMine ? '我方' : '对家'}${isMatch ? '拿下整场' : '升级'}`
   const sorted = [...st.players].sort((a, b) => a.finishOrder! - b.finishOrder!)
   const mine = teamOf(mySeat) === 'even' ? st.levels.even : st.levels.odd
   const theirs = teamOf(mySeat) === 'even' ? st.levels.odd : st.levels.even
