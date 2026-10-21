@@ -227,3 +227,17 @@
   → 另开一页打开 → 复盘页标题/手数/100 条记录都对，无 console 错误；
   手机端不横向溢出。
 - 限制：复盘只含**刚打完的这一局**（引擎每局重置出牌记录，整场的记录没攒下来）。
+
+### 补记：CI 红了——本地验的命令和 CI 不是一条
+- 这轮推上去 CI 的 `bun run test` 挂了，本地却全绿。原因：**CI 用 `bun run test`
+  （vitest 跑在 Bun 上），我本地一直用 `bunx vitest run`（vitest 跑在 Node 上）**。
+  Bun 的 CompressionStream 实现和 Node 不一样，`void writer.write()` + `void close()`
+  在 Bun 上会截断 gzip（Z_BUF_ERROR "unexpected end of file"）。
+- 修法（src/core/replay.ts）：
+  ① 先 `await writer.write()` 再 `await writer.close()`（不等写完就 close 会截断）；
+  ② 但**只写不读会顶住背压**，write 的 promise 永不 resolve（浏览器会卡死）——
+     所以先 `new Response(stream.readable).arrayBuffer()` 开始读，再写、再关；
+  ③ 解压流报错时要提前挂 catch，否则会变成「未处理的 rejection」，Bun 下直接判失败。
+- 顺带把测试超时写进 vite.config.ts（testTimeout 180s）：400 局自动对局回归要跑十几秒，
+  CI 机器更慢，别让机器慢变成测试红。
+- **教训记下来：以后本地验收一律用 `bun run test`（和 CI 同一条命令）。**

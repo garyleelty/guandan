@@ -157,7 +157,7 @@ describe('aiMove 全对局语义', () => {
       expect([...orders].sort((a, b) => a - b)).toEqual([0, 1, 2, 3])
       expect(end.log.length).toBeGreaterThan(0)
     }
-  }, 30000)
+  }, 180_000)
 })
 
 function tributeState(st: GameState, turn: Seat, step: 'give' | 'return'): GameState {

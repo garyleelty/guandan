@@ -39,19 +39,25 @@ function fromBase64Url(s: string): Uint8Array {
 async function gzip(bytes: Uint8Array): Promise<Uint8Array> {
   const cs = new CompressionStream('gzip')
   const writer = cs.writable.getWriter()
-  void writer.write(bytes as unknown as BufferSource)
-  void writer.close()
-  const buf = await new Response(cs.readable).arrayBuffer()
-  return new Uint8Array(buf)
+  // 先开始读、再写：只写不读会顶住背压，write 的 promise 一直不 resolve（浏览器会卡住）；
+  // 但必须等写完再 close，否则部分运行时（CI 的 Bun）会截断 gzip。
+  const reading = new Response(cs.readable).arrayBuffer()
+  // 提前挂个处理器：万一流出错，别变成「未处理的 rejection」（Bun 会因此判失败）
+  reading.catch(() => {})
+  await writer.write(bytes as unknown as BufferSource)
+  await writer.close()
+  return new Uint8Array(await reading)
 }
 
 async function gunzip(bytes: Uint8Array): Promise<Uint8Array> {
   const ds = new DecompressionStream('gzip')
   const writer = ds.writable.getWriter()
-  void writer.write(bytes as unknown as BufferSource)
-  void writer.close()
-  const buf = await new Response(ds.readable).arrayBuffer()
-  return new Uint8Array(buf)
+  const reading = new Response(ds.readable).arrayBuffer()
+  // 同上：空数据/坏数据会让解压流报错，别让它变成未处理的 rejection
+  reading.catch(() => {})
+  await writer.write(bytes as unknown as BufferSource)
+  await writer.close()
+  return new Uint8Array(await reading)
 }
 
 /** 复盘数据 → URL 片段（gzip + base64url，尽量短）。 */
