@@ -10,6 +10,8 @@ import type { GameState, Seat } from '../core/engine'
 import { teamOf } from '../core/engine'
 import { aiMove } from '../core/ai'
 import { isMuted, playSound, toggleMute } from './sound'
+import { TributePanel } from './TributePanel'
+import { canAntiTribute } from '../core/engine'
 
 const COMBO_LABEL: Record<number, string> = {
   0: '单张', 1: '对子', 2: '三张', 3: '三带二', 4: '顺子', 5: '连对', 6: '钢板',
@@ -158,6 +160,9 @@ export function Table() {
   const myLevel = teamOf(mySeat) === 'even' ? st.levels.even : st.levels.odd
   const theirLevel = teamOf(mySeat) === 'even' ? st.levels.odd : st.levels.even
   const myTurn = st.turn === mySeat && st.phase === 'playing'
+  const isTribute = st.phase === 'tribute'
+  const tributeTurn = isTribute && st.turn === mySeat
+  const tribute = st.tribute
   const table = st.trick.table
 
   const sortedHand = useMemo(
@@ -167,6 +172,15 @@ export function Table() {
   const selCards = useMemo(() => me.hand.filter((c) => selected.has(c.id)), [me.hand, selected])
   const selCombo = selCards.length >= 1 ? identify(selCards) : null
   const canPlay = !!selCombo && (!table || beats(selCombo, table.combo))
+  // 进贡：只能交一张；还牌：只能还一张不大于 10 的牌
+  const canGive = tributeTurn && tribute?.step === 'give' && selCards.length === 1
+  const hasLowCard = me.hand.some((c) => c.rank <= 10)
+  const canReturn =
+    tributeTurn &&
+    tribute?.step === 'return' &&
+    selCards.length === 1 &&
+    (selCards[0]!.rank <= 10 || !hasLowCard)
+  const canAnti = tributeTurn && tribute?.step === 'give' && canAntiTribute(me.hand)
   const canPass = myTurn && !!table && st.trick.pending.includes(mySeat)
 
   const toggle = (id: string) =>
@@ -190,6 +204,16 @@ export function Table() {
   const pass = () => {
     if (!canPass) return
     dispatch({ kind: 'pass', seat: mySeat })
+    setSelected(new Set())
+  }
+  const give = () => {
+    if (!canGive && !canReturn) return
+    dispatch({ kind: 'give', seat: mySeat, card: selCards[0]!.id })
+    setSelected(new Set())
+  }
+  const anti = () => {
+    if (!canAnti) return
+    dispatch({ kind: 'give', seat: mySeat })
     setSelected(new Set())
   }
 
@@ -239,6 +263,8 @@ export function Table() {
 
   useEffect(() => {
     if (st.phase === 'ended') playSound('win')
+    // 进贡阶段清掉上一局的特效，别压在贡牌面板上
+    if (st.phase === 'tribute') setFx(0)
   }, [st.phase])
 
   const centerCards = table?.combo.cards ?? []
@@ -297,7 +323,9 @@ export function Table() {
 
         {/* 牌桌中央 */}
         <div className="relative flex min-h-0 flex-1 items-center justify-center py-4">
-          {centerCards.length > 0 ? (
+          {isTribute ? (
+            <TributePanel st={st} mySeat={mySeat} />
+          ) : centerCards.length > 0 ? (
             <div className="flex flex-col items-center gap-3">
               <div className="flex flex-wrap items-end justify-center gap-1.5">
                 {centerCards.map((c) => (
@@ -341,6 +369,11 @@ export function Table() {
           {myTurn && (
             <span className="chip bg-accent/15 text-accent">{table ? '轮到你' : '轮到你领出'}</span>
           )}
+          {tributeTurn && (
+            <span className="chip bg-accent/15 text-accent" data-testid="tribute-turn">
+              {tribute?.step === 'return' ? '轮到你还牌' : '轮到你进贡'}
+            </span>
+          )}
           {hint ? <span className="text-[13px] text-accent">{hint}</span> : null}
           {!hint && blockReason ? (
             <span className="text-[13px] text-muted" data-testid="block-reason">
@@ -374,17 +407,37 @@ export function Table() {
             >
               理牌 · {handMode === 'rank' ? '花色' : '点数'}
             </button>
-            <button className="btn btn-secondary" disabled={!canPass} onClick={pass} data-testid="btn-pass">
-              过
-            </button>
-            <button
-              className="btn btn-primary"
-              disabled={!myTurn || !canPlay}
-              onClick={play}
-              data-testid="btn-play"
-            >
-              出牌
-            </button>
+            {isTribute ? (
+              <>
+                {canAnti && (
+                  <button className="btn btn-secondary" onClick={anti} data-testid="btn-anti">
+                    抗贡
+                  </button>
+                )}
+                <button
+                  className="btn btn-primary"
+                  disabled={!(canGive || canReturn)}
+                  onClick={give}
+                  data-testid="btn-give"
+                >
+                  {tribute?.step === 'return' ? '还牌' : '交贡'}
+                </button>
+              </>
+            ) : (
+              <>
+                <button className="btn btn-secondary" disabled={!canPass} onClick={pass} data-testid="btn-pass">
+                  过
+                </button>
+                <button
+                  className="btn btn-primary"
+                  disabled={!myTurn || !canPlay}
+                  onClick={play}
+                  data-testid="btn-play"
+                >
+                  出牌
+                </button>
+              </>
+            )}
           </div>
         </div>
         <Hand
@@ -395,6 +448,7 @@ export function Table() {
           levelCardRank={levelCardRank}
           view={handView}
           dimmed={(c) => {
+            if (isTribute) return false
             if (!myTurn || !table) return false
             const c1 = identify([...selCards, c])
             if (selected.has(c.id)) return false

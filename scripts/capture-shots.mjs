@@ -28,7 +28,13 @@ const step = async () =>
   p.eval(`(() => {
     const s = window.__gdStore.getState()
     const st = s.match
-    if (!st || st.phase !== 'playing') return 'ended'
+    if (!st) return 'ended'
+    if (st.phase === 'tribute') {
+      // 进贡阶段：用 AI 的交贡/还牌走法
+      s.dispatch(window.__gdTribute(st, st.turn))
+      return 'tribute'
+    }
+    if (st.phase !== 'playing') return 'ended'
     const seat = st.turn
     s.dispatch(window.__gdAi(st, seat))
     return 'played'
@@ -71,6 +77,7 @@ await p.eval('document.querySelector("[data-testid=rematch]").click()')
 await sleep(900)
 await playRound()
 await sleep(900)
+console.log('after round2:', await p.eval('JSON.stringify({phase: window.__gdStore.getState().match.phase, turn: window.__gdStore.getState().match.turn, hist: window.__gdStore.getState().match.history.length, log: window.__gdStore.getState().match.log.length})'))
 await shot('05-settlement')
 
 console.log(

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import { newGame, step } from '../core/engine'
-import type { Action, GameState, RoundResult, Seat } from '../core/engine'
+import { nextRound, step } from '../core/engine'
+import type { Action, GameState, Seat } from '../core/engine'
 
 export type Screen = 'lobby' | 'room' | 'table'
 export type Mode = 'solo' | 'host' | 'guest'
@@ -16,19 +16,6 @@ export interface RoomSeatLite {
  * 下一局的起始条件：级数接着上一局打，下一局由上一局的头游领出；
  * 若上一局已打过 A（整场结束），则从 2 级重新开始一场（战绩也清零）。
  */
-export function nextRoundOptions(prev: GameState | null): {
-  levels?: { even: number; odd: number }
-  firstLeader: Seat
-  history?: RoundResult[]
-} {
-  if (!prev || prev.matchWinner !== null) return { firstLeader: 0 }
-  return {
-    levels: { even: prev.levels.even, odd: prev.levels.odd },
-    firstLeader: prev.players.find((p) => p.finishOrder === 0)?.seat ?? 0,
-    history: prev.history,
-  }
-}
-
 interface Store {
   screen: Screen
   mode: Mode
@@ -63,20 +50,13 @@ export const useStore = create<Store>((set, get) => ({
   teardown: null,
   rematchSink: null,
   startSolo: () => {
-    const { levels, firstLeader, history } = nextRoundOptions(get().match)
-    set({
-      screen: 'table',
-      mode: 'solo',
-      mySeat: 0,
-      match: newGame({
-        seed: Math.floor(Math.random() * 1e9),
-        names: ['你', 'AI 甲', 'AI 乙', 'AI 丙'],
-        isBot: [false, true, true, true],
-        levels,
-        firstLeader,
-        history,
-      }),
+    // 整场没结束 → 下一局先走进贡（交贡 → 还牌 → 下游领出）；否则开新的一场
+    const match = nextRound(get().match, {
+      seed: Math.floor(Math.random() * 1e9),
+      names: ['你', 'AI 甲', 'AI 乙', 'AI 丙'],
+      isBot: [false, true, true, true],
     })
+    set({ screen: 'table', mode: 'solo', mySeat: 0, match })
   },
   dispatch: (a) => {
     const { mode, match } = get()

@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { sortCards } from './cards'
 import type { Card } from './cards'
 import { newGame, step, autoplay, legalMoves } from './engine'
-import { aiMove } from './ai'
+import type { GameState, Seat } from './engine'
+import { aiMove, aiTributeMove } from './ai'
 import { mk } from './testutil'
 
 function scenario(q: { A: string[]; B: string[]; C: string[]; D: string[] }, opts?: Parameters<typeof newGame>[0]) {
@@ -157,4 +158,53 @@ describe('aiMove 全对局语义', () => {
       expect(end.log.length).toBeGreaterThan(0)
     }
   }, 30000)
+})
+
+function tributeState(st: GameState, turn: Seat, step: 'give' | 'return'): GameState {
+  return {
+    ...st,
+    phase: 'tribute',
+    turn,
+    tribute: {
+      order: [0, 1, 2, 3],
+      givers: [3],
+      to: {},
+      given: {},
+      cards: {},
+      anti: [],
+      received: {},
+      step,
+      returnees: step === 'return' ? [0] : [],
+      returnTo: { 0: 3 },
+      returned: {},
+      leader: 0,
+      seed: 1,
+    },
+  }
+}
+
+describe('aiTributeMove（进贡阶段）', () => {
+  it('交贡：交出手里最大的一张', () => {
+    const { st, fid } = scenario({ A: ['3', 'K', '9'], B: ['4'], C: ['5'], D: ['6'] })
+    const t = tributeState(st, 0, 'give')
+    const move = aiTributeMove(t, 0)
+    expect(move.kind).toBe('give')
+    if (move.kind === 'give') expect(move.card).toBe(fid('K'))
+  })
+
+  it('双王时抗贡（不给牌）', () => {
+    const { st } = scenario({ A: ['3', 'SJ', 'BJ'], B: ['4'], C: ['5'], D: ['6'] })
+    const t = tributeState(st, 0, 'give')
+    const move = aiTributeMove(t, 0)
+    expect(move.kind).toBe('give')
+    if (move.kind === 'give') expect(move.card).toBeUndefined()
+  })
+
+  it('还牌：还最小的一张 ≤10 的牌', () => {
+    const { st, fid } = scenario({ A: ['3', '5', '2'], B: ['4'], C: ['7'], D: ['8'] })
+    const t = tributeState(st, 0, 'return')
+    const move = aiTributeMove(t, 0)
+    expect(move.kind).toBe('give')
+    if (move.kind === 'give') expect(move.card).toBe(fid('3'))
+  })
 })

@@ -43,6 +43,7 @@ export interface SerializedState {
   finishCount: number
   log: GameState['log']
   history: GameState['history']
+  tribute: GameState['tribute']
 }
 
 const filler = (n: number): { id: string; rank: number; suit: number }[] =>
@@ -65,5 +66,6 @@ export function serializeFor(st: GameState, seat: Seat): SerializedState {
     finishCount: st.finishCount,
     log: st.log,
     history: st.history,
+    tribute: st.tribute,
   }
 }

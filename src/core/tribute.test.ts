@@ -185,3 +185,24 @@ describe('双下游', () => {
     expect(g.tribute!.leader).toBe(3) // 贡牌大的那位领出
   })
 })
+
+describe('还牌卡死的兜底', () => {
+  it('手里一张 10 以下的牌都没有时，允许还任意一张（不卡死牌局）', () => {
+    const { s } = finishedRound()
+    const t = newTributeRound(s)!
+    const card = t.players[3]!.hand[0]! // 9 → 交给头游
+    let st = step(t, { kind: 'give', seat: 3, card: card.id })
+    // 头游手里只有大牌：还 9 不合法，但也不能卡死
+    const low = st.players[0]!.hand.find((c) => c.rank <= 10)
+    if (low) {
+      const before = st
+      st = step(st, { kind: 'give', seat: 0, card: low.id })
+      expect(st).not.toBe(before)
+    } else {
+      const any = st.players[0]!.hand[0]!
+      const before = st
+      st = step(st, { kind: 'give', seat: 0, card: any.id })
+      expect(st).not.toBe(before)
+    }
+  })
+})

@@ -156,6 +156,21 @@ export function newTributeRound(prev: GameState, opts?: { seed?: number }): Game
   }
 }
 
+/**
+ * 下一局：整场没结束就走进贡局（交贡 → 还牌 → 下游领出），
+ * 整场结束（打过 A）或没有上一局时开新的一场。
+ */
+export function nextRound(
+  prev: GameState | null,
+  opts?: { seed?: number; names?: string[]; isBot?: boolean[]; levels?: Record<Team, number> },
+): GameState {
+  if (prev && prev.phase === 'ended' && prev.matchWinner === null) {
+    const t = newTributeRound(prev, { seed: opts?.seed })
+    if (t) return t
+  }
+  return newGame({ seed: opts?.seed, names: opts?.names, isBot: opts?.isBot })
+}
+
 export const activeSeats = (st: GameState): Seat[] =>
   st.players.filter((p) => p.finishOrder === null).map((p) => p.seat)
 
@@ -180,7 +195,7 @@ export function step(state: GameState, action: Action): GameState {
 }
 
 /** 手上有双王或四张王才能抗贡。 */
-function canAntiTribute(hand: Card[]): boolean {
+export function canAntiTribute(hand: Card[]): boolean {
   const sj = hand.filter((c) => c.rank === RANK.SJ).length
   const bj = hand.filter((c) => c.rank === RANK.BJ).length
   return (sj >= 1 && bj >= 1) || sj + bj >= 4
@@ -226,9 +241,11 @@ function doGive(state: GameState, action: Action & { kind: 'give' }): GameState 
   if (!tt.returnees.includes(action.seat)) return state
   if (action.seat in tt.returned) return state
   if (action.card === undefined) return state
-  const card = st.players[action.seat]!.hand.find((c) => c.id === action.card)
+  const hand = st.players[action.seat]!.hand
+  const card = hand.find((c) => c.id === action.card)
   if (!card) return state
-  if (!isReturnable(card)) return state
+  // 还牌上限 10；手里一张都没有时（极端牌面）就还最小的一张，别把牌局卡死
+  if (!isReturnable(card) && hand.some(isReturnable)) return state
   st.players[action.seat]!.hand = st.players[action.seat]!.hand.filter((c) => c.id !== card.id)
   const to = tt.returnTo[action.seat]!
   st.players[to]!.hand = sortCards([...st.players[to]!.hand, card])

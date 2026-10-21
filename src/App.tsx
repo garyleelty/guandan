@@ -3,7 +3,7 @@ import { useStore } from './state/store'
 import { Lobby } from './ui/Lobby'
 import { Table } from './ui/Table'
 import { RoomView } from './ui/RoomView'
-import { aiMove } from './core/ai'
+import { aiMove, aiTributeMove } from './core/ai'
 import { joinRoom } from './net/guest'
 import { codeFromUrl } from './net/room'
 
@@ -25,6 +25,21 @@ export default function App() {
     }
   }, [])
 
+  // 进贡阶段：AI 交贡 / 抗贡 / 还牌
+  useEffect(() => {
+    if (!match || match.phase !== 'tribute') return
+    if (mode === 'guest') return
+    const turn = match.turn
+    const p = match.players[turn]!
+    if (!p.isBot) return
+    const t = setTimeout(() => {
+      const cur = useStore.getState().match
+      if (!cur || cur.phase !== 'tribute' || cur.turn !== turn) return
+      useStore.getState().dispatch(aiTributeMove(cur, turn))
+    }, 700)
+    return () => clearTimeout(t)
+  }, [match, mode])
+
   useEffect(() => {
     if (!match || match.phase !== 'playing') return
     if (mode === 'guest') return
@@ -41,9 +56,10 @@ export default function App() {
     return () => clearTimeout(t)
   }, [match, mode])
 
-  // 调试钩子：验收脚本可驱动 AI 打完整局
+  // 调试钩子：验收脚本可驱动 AI 打完整局（含进贡）
   useEffect(() => {
     ;(window as unknown as Record<string, unknown>).__gdAi = aiMove
+    ;(window as unknown as Record<string, unknown>).__gdTribute = aiTributeMove
   }, [])
 
   if (screen === 'room') return <RoomView />

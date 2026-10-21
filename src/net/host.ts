@@ -1,10 +1,10 @@
 import Peer from 'peerjs'
 import type { DataConnection } from 'peerjs'
-import { newGame, step } from '../core/engine'
+import { nextRound, step } from '../core/engine'
 import type { Action, GameState, Seat } from '../core/engine'
 import { peerIdOf, makeRoomCode, serializeFor } from './room'
 import type { Msg } from './room'
-import { useStore, nextRoundOptions } from '../state/store'
+import { useStore } from '../state/store'
 
 export interface RoomSeat {
   seat: Seat
@@ -117,15 +117,11 @@ export function hostRemoveAi(seat: Seat): void {
 export function hostStart(): void {
   const r = room
   if (!r) return
-  // 级数接着上一局打；下一局由上一局头游领出（整场结束后从 2 级重来）
-  const { levels, firstLeader, history } = nextRoundOptions(r.match)
-  r.match = newGame({
+  // 整场没结束 → 下一局先走进贡（交贡 → 还牌 → 下游领出）；否则开新的一场
+  r.match = nextRound(r.match, {
     seed: Math.floor(Math.random() * 1e9),
     names: r.seats.map((s) => (s.kind === 'empty' ? '-' : s.name)),
     isBot: r.seats.map((s) => s.kind !== 'host' && s.kind !== 'guest'),
-    firstLeader,
-    levels,
-    history,
   })
   useStore.setState({
     screen: 'table',
@@ -156,7 +152,7 @@ export function hostApplyIntent(seat: Seat, action: Action): void {
   const r = room
   if (!r) return
   const m = useStore.getState().match ?? r.match
-  if (!m || m.phase !== 'playing') return
+  if (!m || (m.phase !== 'playing' && m.phase !== 'tribute')) return
   if (m.turn !== seat) return
   const next = step(m, action)
   if (next === m) return

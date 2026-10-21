@@ -258,11 +258,11 @@
         },
         {
           "id": "S11-4",
-          "desc": "UI 与联机接线（下一轮）：进贡视图、AI 交贡/还牌、SerializedState 同步、store 改走进贡局",
-          "check": "manual"
+          "desc": "UI 与联机接线：进贡视图、AI 交贡/还牌、SerializedState 同步、store 改走进贡局（真浏览器单机 + P2P 双页验证）",
+          "check": "cmd"
         }
       ],
-      "status": "in_progress"
+      "status": "done"
     }
   ]
 }
