@@ -968,6 +968,33 @@
         }
       ],
       "status": "done"
+    },
+    {
+      "id": "S37",
+      "title": "修重连后玩家名字被「(AI)」后缀弄脏的 bug",
+      "criteria": [
+        {
+          "id": "S37-1",
+          "desc": "断线时把座位名字改成「xxx(AI)」，重连的人会带着后缀回来",
+          "check": "cmd"
+        },
+        {
+          "id": "S37-2",
+          "desc": "修法：名字保持原样，座位类型由房间列表的「AI」标记说明",
+          "check": "cmd"
+        },
+        {
+          "id": "S37-3",
+          "desc": "冒烟脚本新增断言 nameClean（去掉修复会红）",
+          "check": "cmd"
+        },
+        {
+          "id": "S37-4",
+          "desc": "验收：151 tests + 九条冒烟全过 + inspect 0 FAIL 0 WARN",
+          "check": "cmd"
+        }
+      ],
+      "status": "done"
     }
   ]
 }

@@ -41,6 +41,7 @@ const inGame = await host.eval('window.__gdStore.getState().match.phase')
 await guest.goto(`http://localhost:5173/?r=${code}`)
 await sleep(6000)
 const guestSeatInGame = await guest.eval('window.__gdStore.getState().mySeat')
+const hostSeatsInGame = JSON.parse(await seats(host))
 const botFlag = await host.eval(`(() => {
   const m = window.__gdStore.getState().match
   return m ? JSON.stringify(m.players.map(p => p.isBot)) : 'null'
@@ -54,6 +55,10 @@ console.log(
       guestSeatInGame,
       seatKeptInGame: guestSeatInGame === guestSeatBefore,
       botFlag,
+      hostSeatsInGame,
+      // 断线重连后，名字不能被「(AI)」后缀弄脏
+      // 座位串是 "座位号:名字:类型"
+      nameClean: hostSeatsInGame.every((row) => !String(row).split(':')[1]?.includes('(AI)')),
       guestSeatBefore,
       guestSeatAfter,
       sameSeat: guestSeatBefore === guestSeatAfter,

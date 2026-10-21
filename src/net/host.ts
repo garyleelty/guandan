@@ -146,7 +146,9 @@ function hostDrop(conn: DataConnection): void {
   if (!seat) return
   const wasGuest = seat.kind === 'guest'
   seat.kind = r.match ? 'ai' : 'empty'
-  seat.name = r.match ? `${seat.name}(AI)` : ''
+  // 名字保持原样：座位类型变了由房间列表里的「AI」标记说明，
+  // 之前在名字后面加「(AI)」，重连的人会带着这个后缀回来，名字越滚越长
+  if (!r.match) seat.name = ''
   seat.connId = null
   if (!wasGuest) seat.token = undefined
   if (r.match) {
