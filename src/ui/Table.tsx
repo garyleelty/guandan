@@ -123,19 +123,21 @@ function UnseenCards({ st, myHand }: { st: GameState; myHand: GameState['players
   }, [st.log, myHand])
 
   return (
-    <div className="flex shrink-0 items-center gap-2">
+    <div className="flex min-w-0 max-w-full items-center gap-2">
       <span className="shrink-0 text-[13px] text-muted">未见牌面</span>
       {unseen.length === 0 ? (
         <span className="text-[13px] text-faint">还没有信息</span>
       ) : (
-        <div className="flex items-center gap-1.5">
-          {unseen.slice(0, 5).map((r) => (
-            <span key={r.rank} className="chip num" title={`${RANK_LABEL[r.rank] ?? ''} 还可能有 ${r.n} 张`}>
-              {RANK_LABEL[r.rank] ?? ''} ×{r.n}
-            </span>
-          ))}
-          <span className="whitespace-nowrap text-[12px] text-faint">余 {unknownCount} 个点数未现</span>
-        </div>
+        <>
+          <span className="shrink-0 whitespace-nowrap text-[12px] text-faint">余 {unknownCount} 个点数未现</span>
+          <div className="flex min-w-0 max-w-full items-center gap-1.5 overflow-x-auto">
+            {unseen.slice(0, 5).map((r) => (
+              <span key={r.rank} className="chip num shrink-0" title={`${RANK_LABEL[r.rank] ?? ''} 还可能有 ${r.n} 张`}>
+                {RANK_LABEL[r.rank] ?? ''} ×{r.n}
+              </span>
+            ))}
+          </div>
+        </>
       )}
     </div>
   )
@@ -338,9 +340,9 @@ export function Table() {
         </div>
 
         {/* 记录条：出过什么 · 对手还可能有什么 */}
-        <div className="mt-3 flex items-center gap-4 border-y border-rule py-2">
+        <div className="mt-3 flex flex-col gap-1.5 border-y border-rule py-2 sm:flex-row sm:items-center sm:gap-4">
           <RoundLog st={st} />
-          <div className="ml-auto">
+          <div className="w-full min-w-0 sm:ml-auto sm:w-auto">
             <UnseenCards st={st} myHand={me.hand} />
           </div>
         </div>
@@ -524,8 +526,8 @@ function EndOverlay({ onRematch, onLobby }: { onRematch: () => void; onLobby: ()
   const blockedByDweller =
     st.matchWinner === null && st.levels[teamOf(winner.seat)] === 14 && st.dwellerTeam === teamOf(winner.seat)
   return (
-    <div className="absolute inset-0 z-20 grid place-items-center bg-ground/85 px-4">
-      <div className="panel w-[380px] max-w-full p-6">
+    <div className="fixed inset-0 z-30 flex items-center justify-center overflow-y-auto bg-ground/85 px-4">
+      <div className="panel my-auto w-[380px] max-w-full p-5 sm:p-6">
         <h2 className={`text-xl font-semibold ${isMatch ? 'text-accent' : 'text-ink'}`}>{title}</h2>
         {blockedByDweller && (
           <p className="mt-2 text-[13px] text-muted">上一局的下游那队，本局赢不了整场</p>
