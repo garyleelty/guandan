@@ -51,7 +51,7 @@ function guestHandle(msg: Msg): void {
   if (msg.t === 'welcome') {
     useStore.setState({
       mySeat: msg.seat,
-      roomSeats: msg.names.map((n, i) => ({ seat: i as any, name: n ?? '' })) as never,
+      roomSeats: msg.seats.map((s) => ({ seat: s.seat, name: s.name, kind: s.kind })) as never,
       reconnected: msg.reconnected === true,
     })
     return
@@ -65,6 +65,10 @@ function guestHandle(msg: Msg): void {
   }
   if (msg.t === 'leave') {
     useStore.setState({ guestLost: true })
+    return
+  }
+  if (msg.t === 'kick') {
+    useStore.setState({ guestLost: true, kicked: msg.reason ?? '你已被房主请出房间' })
   }
 }
 

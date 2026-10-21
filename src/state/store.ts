@@ -29,6 +29,8 @@ interface Store {
   guestLost: boolean
   /** 断线重连后回到牌桌：给玩家一句提示 */
   reconnected: boolean
+  /** 被房主请出房间时的说明（空串 = 普通掉线） */
+  kicked: string
   intentSink: ((a: Action) => void) | null
   afterDispatch: (() => void) | null
   teardown: (() => void) | null
@@ -51,6 +53,7 @@ export const useStore = create<Store>((set, get) => ({
   joining: false,
   guestLost: false,
   reconnected: false,
+  kicked: '',
   intentSink: null,
   afterDispatch: null,
   teardown: null,

@@ -62,6 +62,16 @@ export function createRoom(): void {
 function hostHandle(conn: DataConnection, msg: Msg): void {
   const r = room
   if (!r) return
+  if (msg.t === 'leave') {
+    // 客人主动离开：把座位空出来
+    const seat = r.seats.find((s) => s.connId === conn.peer)
+    if (seat) {
+      r.seats[seat.seat] = { seat: seat.seat, kind: 'empty', name: '', connId: null }
+      if (r.match) r.match.players[seat.seat]!.isBot = true
+      useStore.setState({ roomSeats: [...r.seats] })
+    }
+    return
+  }
   if (msg.t === 'intent') {
     const seat = r.seats.find((s) => s.connId === conn.peer)
     if (seat && r.match) hostApplyIntent(seat.seat, msg.action)
@@ -94,7 +104,7 @@ function hostHandle(conn: DataConnection, msg: Msg): void {
   conn.send({
     t: 'welcome',
     seat,
-    names: r.seats.map((s) => (s.kind === 'empty' ? null : s.name)),
+    seats: r.seats.map((s) => ({ seat: s.seat, name: s.name, kind: s.kind })),
     reconnected,
   } satisfies Msg)
   useStore.setState({ roomSeats: [...r.seats] })
@@ -120,6 +130,20 @@ function hostDrop(conn: DataConnection): void {
     p.isBot = true
   }
   useStore.setState({ roomSeats: [...r.seats] })
+}
+
+/** 房主请某位客人出房间。 */
+export function hostKick(seat: Seat): void {
+  const r = room
+  if (!r) return
+  const s = r.seats[seat]
+  if (!s || s.kind !== 'guest' || !s.connId) return
+  const conn = (r.peer.connections as Record<string, DataConnection[]>)[s.connId]?.[0]
+  conn?.send({ t: 'kick', seat, reason: '你已被房主请出房间' } satisfies Msg)
+  r.seats[seat] = { seat, kind: 'empty', name: '', connId: null }
+  if (r.match) r.match.players[seat]!.isBot = true
+  useStore.setState({ roomSeats: [...r.seats] })
+  setTimeout(() => conn?.close(), 200)
 }
 
 export function hostAddAi(seat: Seat): void {

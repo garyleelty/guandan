@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useStore } from '../state/store'
-import { hostAddAi, hostRemoveAi, hostStart, destroyRoom } from '../net/host'
+import { hostAddAi, hostKick, hostRemoveAi, hostStart, destroyRoom } from '../net/host'
 import { joinRoom, leaveGuest } from '../net/guest'
 import { shareLink, codeFromUrl } from '../net/room'
 import type { Seat } from '../core/engine'
@@ -13,6 +13,7 @@ export function RoomView() {
   const seats = useStore((s) => s.roomSeats)
   const joining = useStore((s) => s.joining)
   const lost = useStore((s) => s.guestLost)
+  const kicked = useStore((s) => s.kicked)
   const [codeInput, setCodeInput] = useState(codeFromUrl() ?? '')
 
   if (mode === 'guest') {
@@ -20,14 +21,16 @@ export function RoomView() {
       return (
         <div className="grid h-full place-items-center px-4">
           <div className="panel w-full max-w-[480px] p-6">
-            <h2 className="text-base font-semibold text-ink">连接断开</h2>
+            <h2 className="text-base font-semibold text-ink">{kicked || '连接断开'}</h2>
             <button
               className="btn btn-secondary mt-4 w-full"
               onClick={() => useStore.getState().backToLobby()}
             >
               返回大厅
             </button>
-            <p className="mt-3 text-xs text-muted">与房主的连接已断开，牌局由 AI 继续。</p>
+            <p className="mt-3 text-xs text-muted">
+              {kicked ? '你可以回大厅重新开一局，或等房主再拉你。' : '与房主的连接已断开，牌局由 AI 继续。'}
+            </p>
           </div>
         </div>
       )
@@ -60,10 +63,56 @@ export function RoomView() {
           </div>
         </div>
       )
-    return <Centered>已加入，等待房东开局…</Centered>
+    return <GuestWaiting code={code} seats={seats} />
   }
 
   return <HostSide code={code} seats={seats} />
+}
+
+/** 客人的等候室：谁来了、还差几个、房号多少，都摆明白。 */
+function GuestWaiting({ code, seats }: { code: string | null; seats: RoomSeats }) {
+  const list = seats ?? []
+  const aiLevel = useStore((s) => s.aiLevel)
+  return (
+    <div className="mx-auto w-full max-w-[480px] px-4 py-8">
+      <div className="panel p-5">
+        <div className="flex items-baseline justify-between gap-3">
+          <h1 className="text-xl font-semibold text-ink">等候开局</h1>
+          <div className="num text-2xl font-semibold tracking-[0.2em] text-accent">{code ?? ''}</div>
+        </div>
+        <p className="mt-2 text-sm text-muted">已加入，等房主开局…</p>
+
+        <div className="mt-4 divide-y divide-rule border-y border-rule">
+          {list.map((s) => (
+            <div key={s.seat} className="flex h-11 items-center justify-between gap-3">
+              <div className="flex min-w-0 items-baseline gap-2">
+                <span className="shrink-0 text-sm text-ink">{SEAT_LABEL[s.seat]}</span>
+                {s.kind === 'empty' ? (
+                  <span className="text-sm text-faint">虚位</span>
+                ) : (
+                  <>
+                    <span
+                      className={
+                        s.kind === 'ai' ? 'truncate text-sm text-muted' : 'truncate text-sm text-accent'
+                      }
+                    >
+                      {s.name}
+                    </span>
+                    <span className="chip">{s.kind === 'ai' ? 'AI' : '玩家'}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-3 flex items-center gap-2 text-[13px] text-muted">
+          <span>AI 难度</span>
+          <span className="chip">{['简单', '普通', '难'][aiLevel]}</span>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function Centered({ children }: { children: ReactNode }) {
@@ -170,6 +219,16 @@ function HostSide({ code, seats }: { code: string | null; seats: RoomSeats }) {
                       onClick={() => hostRemoveAi(s.seat as Seat)}
                     >
                       移除
+                    </button>
+                  )}
+                  {s.kind === 'guest' && (
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => hostKick(s.seat as Seat)}
+                      title="请这位玩家离开房间"
+                      data-testid={`kick-${s.seat}`}
+                    >
+                      移出
                     </button>
                   )}
                 </div>

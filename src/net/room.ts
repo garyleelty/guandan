@@ -23,11 +23,19 @@ export function codeFromUrl(): string | null {
 export type Msg =
   /** 客人打招呼：带一个本机记住的 token，刷新页面后能坐回原座 */
   | { t: 'hello'; name: string; token?: string }
-  | { t: 'welcome'; seat: Seat; names: (string | null)[]; reconnected?: boolean }
+  | {
+      t: 'welcome'
+      seat: Seat
+      /** 各座信息（名字 + 身份），客人据此画等候室 */
+      seats: { seat: Seat; name: string; kind: 'host' | 'guest' | 'ai' | 'empty' }[]
+      reconnected?: boolean
+    }
   | { t: 'state'; state: SerializedState; seat: Seat }
   | { t: 'intent'; action: Action }
   | { t: 'start' }
   | { t: 'leave' }
+  /** 房主把某位客人请出房间 */
+  | { t: 'kick'; seat: Seat; reason?: string }
 
 export interface SerializedState {
   phase: GameState['phase']

@@ -35,7 +35,7 @@ export function TributePanel({ st, mySeat }: { st: GameState; mySeat: Seat }) {
         : `等待 ${back} 还牌`
     }
     return mine
-      ? `轮到你进贡：把手���最大的一张交给 ${st.players[t.to[mySeat] ?? mySeat]!.name}`
+      ? `轮到你进贡：把手里的最大的一张交给 ${st.players[t.to[mySeat] ?? mySeat]!.name}`
       : `等待 ${turn.name} 进贡`
   })()
 
