@@ -12,6 +12,8 @@ const RULES = [
   '头游率队升级：1+2 同队 +3 级，1+3 +2 级，1+4 +1 级',
   '打到 A 级需双下（1+2 名同队）才夺整局',
   '炸弹、同花顺、天炸可压常规牌型',
+  '红桃级牌是「逢人配」，可当任意牌点搭配使用',
+  '每局之间下游向上游进贡，上游还一张 10 以下的牌',
   '房间空位可由 AI 补位，掉线玩家由 AI 接手',
 ]
 
@@ -22,9 +24,16 @@ const MOTIF = (() => {
   return [pick(RANK.TWO, 0), pick(RANK.ACE, 1), deck.find((c) => c.rank === RANK.BJ)!]
 })()
 
+const AI_LEVELS: { v: 0 | 1 | 2; label: string; hint: string }[] = [
+  { v: 0, label: '简单', hint: '会拆牌、偶尔想不起' },
+  { v: 1, label: '普通', hint: '会算牌型，不算剩余牌' },
+  { v: 2, label: '难', hint: '算剩余牌，压得动就压' },
+]
+
 export function Lobby() {
   const startSolo = useStore((s) => s.startSolo)
   const mode = useStore((s) => s.mode)
+  const aiLevel = useStore((s) => s.aiLevel)
   const [nick_, setNick] = useState(nick())
   const deep = mode === 'guest' || codeFromUrl()
 
@@ -60,6 +69,27 @@ export function Lobby() {
             placeholder="你的昵称"
             data-testid="nick"
           />
+
+          <div className="mt-6">
+            <span className="text-sm text-muted">AI 难度</span>
+            <div className="mt-2 flex gap-2" data-testid="ai-level">
+              {AI_LEVELS.map((l) => (
+                <button
+                  key={l.v}
+                  onClick={() => useStore.setState({ aiLevel: l.v })}
+                  className={[
+                    'flex-1 rounded-control border px-2 py-2 text-left',
+                    aiLevel === l.v ? 'border-accent bg-accent/10' : 'border-control bg-surface',
+                  ].join(' ')}
+                  aria-pressed={aiLevel === l.v}
+                  data-testid={`ai-level-${l.v}`}
+                >
+                  <span className="block text-sm text-ink">{l.label}</span>
+                  <span className="block text-[12px] text-faint">{l.hint}</span>
+                </button>
+              ))}
+            </div>
+          </div>
 
           <div className="mt-6 space-y-2">
             <button className="btn btn-primary min-h-11 w-full" onClick={startSolo} data-testid="solo">

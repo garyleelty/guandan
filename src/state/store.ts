@@ -19,6 +19,8 @@ export interface RoomSeatLite {
 interface Store {
   screen: Screen
   mode: Mode
+  /** AI 难度：0 简单 / 1 普通 / 2 难 */
+  aiLevel: 0 | 1 | 2
   match: GameState | null
   mySeat: Seat
   roomCode: string | null
@@ -39,6 +41,7 @@ interface Store {
 export const useStore = create<Store>((set, get) => ({
   screen: 'lobby',
   mode: 'solo',
+  aiLevel: 1,
   match: null,
   mySeat: 0,
   roomCode: null,
@@ -55,6 +58,7 @@ export const useStore = create<Store>((set, get) => ({
       seed: Math.floor(Math.random() * 1e9),
       names: ['你', 'AI 甲', 'AI 乙', 'AI 丙'],
       isBot: [false, true, true, true],
+      aiLevel: get().aiLevel,
     })
     set({ screen: 'table', mode: 'solo', mySeat: 0, match })
   },

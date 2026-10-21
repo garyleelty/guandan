@@ -66,15 +66,18 @@ function pickCheapest(
   lead: boolean,
   level: number,
   risk?: (m: Combo) => number,
+  opts?: { breakScale?: number; jitter?: number },
 ): Combo | null {
   let best: Combo | null = null
   let bestCost = Infinity
+  const breakScale = opts?.breakScale ?? 1
   for (const m of moves) {
     const cost =
       valueOf(m.cards, level) +
       (lead ? (LEAD_BONUS[m.type] ?? 0) : SPECIAL.has(m.type) ? SPECIAL_FOLLOW_COST : 0) +
-      breakPenalty(m, shape, level) +
-      (risk ? risk(m) * RISK_COST : 0)
+      breakPenalty(m, shape, level) * breakScale +
+      (risk ? risk(m) * RISK_COST : 0) +
+      (opts?.jitter ? (Math.random() - 0.5) * opts.jitter : 0)
     if (cost < bestCost || (cost === bestCost && best !== null && m.rank < best.rank)) {
       best = m
       bestCost = cost
@@ -169,6 +172,10 @@ export function aiMove(st: GameState, seat: Seat): Action {
   const table = st.trick.table
   const hand = st.players[seat]!.hand
   const shape = handShape(hand, st.handLevel)
+  // 难度：0 简单（拆牌代价打折、选择带随机）· 1 普通 · 2 难（加记牌风险）
+  const level = st.aiLevel ?? 1
+  const breakScale = level === 0 ? 0.35 : 1
+  const jitter = level === 0 ? 6 : 0
   const mine = teamOf(seat)
   const oppMin = Math.min(
     ...st.players.filter((p) => teamOf(p.seat) !== mine).map((p) => p.hand.length),
@@ -182,9 +189,14 @@ export function aiMove(st: GameState, seat: Seat): Action {
       (m) => m.type === ComboType.PAIR || m.type === ComboType.TRIPLE || m.type === ComboType.BOMB,
     )
     const possible = hasGroup ? possibleCounts(st, seat) : null
-    const best = pickCheapest(moves, shape, true, st.handLevel, possible
-      ? (m) => beatRisk(m, possible, st, seat)
-      : undefined)
+    const best = pickCheapest(
+      moves,
+      shape,
+      true,
+      st.handLevel,
+      level >= 2 && possible ? (m) => beatRisk(m, possible, st, seat) : undefined,
+      { breakScale, jitter },
+    )
     if (!best) return { kind: 'pass', seat }
     return { kind: 'play', seat, cards: best.cards.map((c) => c.id) }
   }
@@ -192,7 +204,7 @@ export function aiMove(st: GameState, seat: Seat): Action {
   // 队友坐庄 → 让他打
   if (teamOf(table.seat) === mine) return { kind: 'pass', seat }
 
-  const best = pickCheapest(moves, shape, false, st.handLevel)
+  const best = pickCheapest(moves, shape, false, st.handLevel, undefined, { breakScale })
   if (!best) return { kind: 'pass', seat }
 
   // 只剩炸弹能压，而对手还早 → 留着当后手

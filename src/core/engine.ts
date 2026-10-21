@@ -65,6 +65,8 @@ export interface GameState {
   handLevel: number
   /** 上一局下游（第四名）所在的一队：按官方规则，这队本局赢了也不能拿下整场 */
   dwellerTeam: Team | null
+  /** AI 难度：0 简单 / 1 普通 / 2 难 */
+  aiLevel: 0 | 1 | 2
   matchWinner: Team | null
   players: Player[]
   turn: Seat
@@ -91,6 +93,7 @@ export function newGame(opts?: {
   isBot?: boolean[]
   firstLeader?: Seat
   history?: RoundResult[]
+  aiLevel?: 0 | 1 | 2
 }): GameState {
   const handLevel = opts?.levels ? Math.max(opts.levels.even, opts.levels.odd) : 2
   const hands = opts?.hands ?? deal(newShuffledDeck({ seed: opts?.seed }))
@@ -107,6 +110,7 @@ export function newGame(opts?: {
     levels: opts?.levels ? { even: opts.levels.even, odd: opts.levels.odd } : { even: 2, odd: 2 },
     handLevel,
     dwellerTeam: null,
+    aiLevel: opts?.aiLevel ?? 1,
     matchWinner: null,
     players,
     turn,
@@ -142,6 +146,7 @@ export function newTributeRound(prev: GameState, opts?: { seed?: number }): Game
     handLevel: prev.levels[teamOf(head)],
     // 官方规则：上一局下游（第四名）那队，本局赢了也不能拿下整场
     dwellerTeam: teamOf(fourth),
+    aiLevel: prev.aiLevel,
     matchWinner: null,
     players: prev.players.map((p) => ({ ...p, hand: [...p.hand] })),
     turn: givers[0]!,
@@ -173,13 +178,19 @@ export function newTributeRound(prev: GameState, opts?: { seed?: number }): Game
  */
 export function nextRound(
   prev: GameState | null,
-  opts?: { seed?: number; names?: string[]; isBot?: boolean[]; levels?: Record<Team, number> },
+  opts?: {
+    seed?: number
+    names?: string[]
+    isBot?: boolean[]
+    levels?: Record<Team, number>
+    aiLevel?: 0 | 1 | 2
+  },
 ): GameState {
   if (prev && prev.phase === 'ended' && prev.matchWinner === null) {
     const t = newTributeRound(prev, { seed: opts?.seed })
     if (t) return t
   }
-  return newGame({ seed: opts?.seed, names: opts?.names, isBot: opts?.isBot })
+  return newGame({ seed: opts?.seed, names: opts?.names, isBot: opts?.isBot, aiLevel: opts?.aiLevel })
 }
 
 export const activeSeats = (st: GameState): Seat[] =>

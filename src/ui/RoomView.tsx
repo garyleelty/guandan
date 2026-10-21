@@ -76,9 +76,16 @@ function Centered({ children }: { children: ReactNode }) {
 
 const SEAT_LABEL = ['本座（房东）', '右家', '对家', '左家'] as const
 
+const AI_LEVELS: { v: 0 | 1 | 2; label: string }[] = [
+  { v: 0, label: '简单' },
+  { v: 1, label: '普通' },
+  { v: 2, label: '难' },
+]
+
 function HostSide({ code, seats }: { code: string | null; seats: RoomSeats }) {
   const link = code ? shareLink(code) : ''
   const seatList = seats ?? []
+  const aiLevel = useStore((s) => s.aiLevel)
   return (
     <div className="mx-auto w-full max-w-[480px] px-4 py-8">
       <div className="panel p-5">
@@ -103,6 +110,28 @@ function HostSide({ code, seats }: { code: string | null; seats: RoomSeats }) {
           >
             复制
           </button>
+        </div>
+
+        <div className="mt-4 flex items-center gap-2">
+          <span className="text-sm text-muted">AI 难度</span>
+          <div className="ml-auto flex gap-1.5" data-testid="room-ai-level">
+            {AI_LEVELS.map((l) => (
+              <button
+                key={l.v}
+                onClick={() => useStore.setState({ aiLevel: l.v })}
+                className={[
+                  'rounded-control border px-3 py-1 text-[13px]',
+                  aiLevel === l.v
+                    ? 'border-accent bg-accent/10 text-ink'
+                    : 'border-control bg-surface text-muted',
+                ].join(' ')}
+                aria-pressed={aiLevel === l.v}
+                data-testid={`room-ai-level-${l.v}`}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="mt-5 divide-y divide-rule border-y border-rule">

@@ -391,6 +391,33 @@
         }
       ],
       "status": "done"
+    },
+    {
+      "id": "S16",
+      "title": "AI 难度三档（简单/普通/难）",
+      "criteria": [
+        {
+          "id": "S16-1",
+          "desc": "难度进状态（GameState.aiLevel），联机同步，单机与房间都能选",
+          "check": "cmd"
+        },
+        {
+          "id": "S16-2",
+          "desc": "简单档：拆牌代价打折、领出带随机；普通档：只算牌型；难档：再加记牌风险",
+          "check": "cmd"
+        },
+        {
+          "id": "S16-3",
+          "desc": "大厅与房间各有难度选择器；玩法速览补上逢人配与进贡两条规则",
+          "check": "manual"
+        },
+        {
+          "id": "S16-4",
+          "desc": "验收：122 tests + 真浏览器单机/P2P + inspect 0 FAIL 0 WARN",
+          "check": "cmd"
+        }
+      ],
+      "status": "done"
     }
   ]
 }

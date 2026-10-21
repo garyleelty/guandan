@@ -122,6 +122,7 @@ export function hostStart(): void {
     seed: Math.floor(Math.random() * 1e9),
     names: r.seats.map((s) => (s.kind === 'empty' ? '-' : s.name)),
     isBot: r.seats.map((s) => s.kind !== 'host' && s.kind !== 'guest'),
+    aiLevel: useStore.getState().aiLevel,
   })
   useStore.setState({
     screen: 'table',

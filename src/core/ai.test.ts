@@ -233,14 +233,44 @@ describe('记牌（AI 算剩余牌）', () => {
     }
   })
 
-  it('同样的对子，压不动的那手先出（K 对压不动，9 对压得动）', () => {
-    const st = newGame({ hands: [mk('K♠', 'K♥', '9♠', '9♥'), mk('4', '5'), mk('6', '7'), mk('8', '9')] })
+  it('同样的对子，压不动的那手先出（K 对压不动，9 对压得动）——难档才用记牌', () => {
+    const st = newGame({ hands: [mk('K♠', 'K♥', '9♠', '9♥'), mk('4', '5'), mk('6', '7'), mk('8', '9')], aiLevel: 2 })
     st.log = played(14) // A 全出完了：对 K 对来说没人压得动
     const mv = aiMove(st, 0)
     expect(mv.kind).toBe('play')
     if (mv.kind === 'play') {
       const ranks = mv.cards!.map((id) => Number(id.slice(1, id.lastIndexOf('-'))))
       expect(ranks).toEqual([13, 13]) // 出 K 对，不是 9 对
+    }
+  })
+})
+
+describe('AI 难度', () => {
+  /** 桌面上是单张 8，我手里有对 9 和一张 A：跟牌只能拆对 9 或出 A */
+  function followState(aiLevel: 0 | 1 | 2) {
+    const st = newGame({ hands: [mk('9♠', '9♥', 'A♠'), mk('4'), mk('5'), mk('6')], aiLevel })
+    st.trick.table = { seat: 3, combo: { type: 0, rank: 8, count: 1, cards: [] } }
+    st.trick.pending = [0, 1, 2]
+    st.trick.lastPlay = { seat: 3, combo: { type: 0, rank: 8, count: 1, cards: [] } }
+    st.turn = 0
+    return st
+  }
+
+  it('普通档：宁可用 A 也不拆对 9', () => {
+    const mv = aiMove(followState(1), 0)
+    expect(mv.kind).toBe('play')
+    if (mv.kind === 'play') {
+      const ranks = mv.cards!.map((id) => Number(id.slice(1, id.lastIndexOf('-'))))
+      expect(ranks).toEqual([14]) // A
+    }
+  })
+
+  it('简单档：拆对 9 去压（拆牌代价打折）', () => {
+    const mv = aiMove(followState(0), 0)
+    expect(mv.kind).toBe('play')
+    if (mv.kind === 'play') {
+      const ranks = mv.cards!.map((id) => Number(id.slice(1, id.lastIndexOf('-'))))
+      expect(ranks).toEqual([9]) // 拆掉对 9 出一张 9
     }
   })
 })
