@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { RANK, buildDeck, cardIdToRank, deal, levelLabel, levelToRank, newShuffledDeck, sortBySuitGroups, sortCards, cardFromId,
+import {
+  RANK,
+  buildDeck,
+  cardIdToRank,
+  deal,
+  levelLabel,
+  levelToRank,
+  newShuffledDeck,
+  sortBySuitGroups,
+  sortCards,
+  cardFromId,
+  cardIndexOf,
+  cardIdOf,
 } from './cards'
 import type { Card } from './cards'
 
@@ -191,6 +203,24 @@ describe('cardFromId（牌 id 还原整张牌）', () => {
   it('和 cardIdToRank 一致', () => {
     for (const id of ['s3-0', 'd10-1', 'c13-0', 'h2-1']) {
       expect(cardFromId(id).rank).toBe(cardIdToRank(id))
+    }
+  })
+})
+
+describe('牌序号（复盘链接的紧凑编码）', () => {
+  it('108 张牌的序号与 id 互转一致', () => {
+    const deck = buildDeck()
+    expect(deck).toHaveLength(108)
+    deck.forEach((c, i) => {
+      expect(cardIndexOf(c.id)).toBe(i)
+      expect(cardIdOf(i)).toBe(c.id)
+    })
+  })
+  it('序号落在 0..107', () => {
+    for (const c of buildDeck()) {
+      const i = cardIndexOf(c.id)
+      expect(i).toBeGreaterThanOrEqual(0)
+      expect(i).toBeLessThan(108)
     }
   })
 })

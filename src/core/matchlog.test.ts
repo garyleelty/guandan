@@ -72,6 +72,37 @@ describe('复盘数据：整场（v2）', () => {
     expect(await decodeReplay(frag)).toEqual(data)
   })
 
+  it('二进制编码后链接明显更短', async () => {
+    trackMatchLog(stateWith(logA, 1))
+    const st = stateWith(logB, 1)
+    st.log = Array.from({ length: 100 }, (_, i) => ({
+      seat: (i % 4) as 0 | 1 | 2 | 3,
+      ids: ['s' + (3 + (i % 10)) + '-0', 'h' + (3 + (i % 10)) + '-1'],
+      combo: { type: 1, rank: 3 + (i % 10) },
+    }))
+    const data = replayFromState(st)
+    const frag = await encodeReplay(data)
+    // 同样内容走 JSON 的话要长好几倍
+    const asJson = await encodeReplay({
+      v: 1,
+      n: data.n,
+      l: data.l,
+      g: st.log.map((e) => ({ s: e.seat, c: e.ids, t: e.combo?.type ?? null, r: e.combo?.rank ?? 0 })),
+    })
+    expect(frag.length).toBeLessThan(asJson.length * 0.7)
+  })
+
+  it('二进制编解码后内容一致（含牌面）', async () => {
+    trackMatchLog(stateWith(logA, 1))
+    const data = replayFromState(stateWith(logB, 1))
+    const frag = await encodeReplay(data)
+    const back = await decodeReplay(frag)
+    expect(back).toEqual(data)
+    if (back?.v === 2) {
+      expect(back.rounds[0]!.g[0]!.c).toEqual(logA[0]!.ids)
+    }
+  })
+
   it('v1 的老链接仍能打开', async () => {
     const st = stateWith(logA, 0)
     const data = replayFromState(st)

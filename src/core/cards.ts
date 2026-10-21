@@ -36,6 +36,29 @@ export function cardId(suit: number, rank: number, deckNo = 0): string {
   return `${SUIT_ABBR[suit] ?? 'x'}${rank}-${deckNo}`
 }
 
+/**
+ * 牌在整副牌里的序号（0..107）：两副牌，每副 54 张（52 张 + 大小王）。
+ * 复盘链接要短，牌用序号存比用 "s14-0" 这样的字符串省一大截。
+ */
+export function cardIndexOf(id: string): number {
+  if (id.startsWith('sj-')) return (id.endsWith('1') ? 54 : 0) + 52
+  if (id.startsWith('bj-')) return (id.endsWith('1') ? 54 : 0) + 53
+  const suit = Math.max(0, SUIT_ABBR.indexOf(id[0] ?? 'x'))
+  const dash = id.indexOf('-')
+  const rank = Number(id.slice(1, dash))
+  const deckNo = Number(id.slice(dash + 1)) || 0
+  return deckNo * 54 + suit * 13 + (rank - 2)
+}
+
+/** 序号 → 牌 id（cardIndexOf 的逆运算）。 */
+export function cardIdOf(index: number): string {
+  const deckNo = index >= 54 ? 1 : 0
+  const k = index % 54
+  if (k === 52) return `sj-${deckNo}`
+  if (k === 53) return `bj-${deckNo}`
+  return cardId(Math.floor(k / 13), (k % 13) + 2, deckNo)
+}
+
 export function buildDeck(): Card[] {
   const d: Card[] = []
   for (let deckNo = 0; deckNo < 2; deckNo++) {
