@@ -337,6 +337,33 @@
         }
       ],
       "status": "done"
+    },
+    {
+      "id": "S14",
+      "title": "下游那队赢不了整场 + 报牌阈值 + AI 记牌",
+      "criteria": [
+        {
+          "id": "S14-1",
+          "desc": "官方规则：上一局下游（第四名）那队，本局赢了也不能拿下整场（状态带 dwellerTeam）",
+          "check": "cmd"
+        },
+        {
+          "id": "S14-2",
+          "desc": "报牌阈值按官方：剩 ≤10 张标「报牌」（原来 ≤2）",
+          "check": "manual"
+        },
+        {
+          "id": "S14-3",
+          "desc": "AI 记牌：算每个点数的剩余张数，估对手压得动的组数，出对子前先算风险",
+          "check": "cmd"
+        },
+        {
+          "id": "S14-4",
+          "desc": "验收：118 tests + 真浏览器单机/P2P + inspect 0 FAIL 0 WARN",
+          "check": "cmd"
+        }
+      ],
+      "status": "done"
     }
   ]
 }

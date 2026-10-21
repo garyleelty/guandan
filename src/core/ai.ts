@@ -2,7 +2,7 @@ import { teamOf, legalMoves, canAntiTribute } from './engine'
 import type { Action, GameState, Seat } from './engine'
 import { ComboType } from './combos'
 import type { Combo } from './combos'
-import { RANK, effectiveRank, isWild } from './cards'
+import { RANK, cardIdToRank, effectiveRank, isWild } from './cards'
 import type { Card } from './cards'
 
 const SPECIAL = new Set<number>([ComboType.BOMB, ComboType.SFLUSH, ComboType.JOKERS])
@@ -60,14 +60,21 @@ function valueOf(cards: Card[], level: number): number {
   return cards.reduce((sum, c) => sum + effectiveRank(c, level) + (isWild(c, level) ? 30 : 0), 0)
 }
 
-function pickCheapest(moves: Combo[], shape: Map<number, number>, lead: boolean, level: number): Combo | null {
+function pickCheapest(
+  moves: Combo[],
+  shape: Map<number, number>,
+  lead: boolean,
+  level: number,
+  risk?: (m: Combo) => number,
+): Combo | null {
   let best: Combo | null = null
   let bestCost = Infinity
   for (const m of moves) {
     const cost =
       valueOf(m.cards, level) +
       (lead ? (LEAD_BONUS[m.type] ?? 0) : SPECIAL.has(m.type) ? SPECIAL_FOLLOW_COST : 0) +
-      breakPenalty(m, shape, level)
+      breakPenalty(m, shape, level) +
+      (risk ? risk(m) * RISK_COST : 0)
     if (cost < bestCost || (cost === bestCost && best !== null && m.rank < best.rank)) {
       best = m
       bestCost = cost
@@ -75,6 +82,77 @@ function pickCheapest(moves: Combo[], shape: Map<number, number>, lead: boolean,
   }
   return best
 }
+
+/** 牌 id → 点数：牌就那么 108 张，缓存一下省得反复解字符串。 */
+const rankOfId = new Map<string, number>()
+function rankCached(id: string): number {
+  let r = rankOfId.get(id)
+  if (r === undefined) {
+    r = cardIdToRank(id)
+    rankOfId.set(id, r)
+  }
+  return r
+}
+
+/** 每个点数现在还剩多少张（两副牌每点 8 张，王 2 张）。 */
+function remainingCounts(st: GameState): Map<number, number> {
+  const played = new Map<number, number>()
+  for (const e of st.log) {
+    for (const id of e.ids) {
+      const r = rankCached(id)
+      played.set(r, (played.get(r) ?? 0) + 1)
+    }
+  }
+  const out = new Map<number, number>()
+  for (let r = 2; r <= 14; r++) out.set(r, 8 - (played.get(r) ?? 0))
+  out.set(RANK.SJ, 2 - (played.get(RANK.SJ) ?? 0))
+  out.set(RANK.BJ, 2 - (played.get(RANK.BJ) ?? 0))
+  return out
+}
+
+/**
+ * 记牌：对手手里**可能**还有的张数（把我自己手里的排掉；搭档的手牌是暗的，算不准）。
+ * 这是上界估计——宁可高估对手的牌，也不能低估。
+ */
+function possibleCounts(st: GameState, seat: Seat): Map<number, number> {
+  const remaining = remainingCounts(st)
+  const mine = new Map<number, number>()
+  for (const c of st.players[seat]!.hand) mine.set(c.rank, (mine.get(c.rank) ?? 0) + 1)
+  const out = new Map<number, number>()
+  for (const [r, n] of remaining) out.set(r, n - (mine.get(r) ?? 0))
+  return out
+}
+
+/** 对手能凑出的、比 rank 大的同型组数上界（size 张一组）。 */
+function possibleHigher(possible: Map<number, number>, rank: number, size: number): number {
+  let n = 0
+  for (const [r, c] of possible) {
+    if (r <= rank || r >= RANK.SJ) continue
+    n += Math.floor(c / size)
+  }
+  return n
+}
+
+/**
+ * 这手牌被压掉的估计：对手可能凑出的更大同型组数（按对手剩牌数封顶）。
+ * 记牌的用处就在这儿——算得出对手压得动，就别急着出对子。
+ */
+function beatRisk(combo: Combo, possible: Map<number, number>, st: GameState, seat: Seat): number {
+  const size =
+    combo.type === ComboType.PAIR ? 2 : combo.type === ComboType.TRIPLE ? 3 : combo.type === ComboType.BOMB ? 4 : 0
+  if (size === 0) return 0
+  const groups = possibleHigher(possible, combo.rank, size)
+  if (groups === 0) return 0
+  let cap = 0
+  for (const opp of st.players) {
+    if (teamOf(opp.seat) === teamOf(seat)) continue
+    cap = Math.max(cap, Math.floor(opp.hand.length / size))
+  }
+  return Math.min(groups, cap)
+}
+
+/** 被压风险的代价：每多一种可能压法，这一手就贵一分。 */
+const RISK_COST = 12
 
 /**
  * AI 走子：
@@ -99,7 +177,14 @@ export function aiMove(st: GameState, seat: Seat): Action {
   const urgent = oppMin <= 2 || hand.length <= 1
 
   if (!table) {
-    const best = pickCheapest(moves, shape, true, st.handLevel)
+    // 记牌：算得出对手可能压得动，这一手就贵一点
+    const hasGroup = moves.some(
+      (m) => m.type === ComboType.PAIR || m.type === ComboType.TRIPLE || m.type === ComboType.BOMB,
+    )
+    const possible = hasGroup ? possibleCounts(st, seat) : null
+    const best = pickCheapest(moves, shape, true, st.handLevel, possible
+      ? (m) => beatRisk(m, possible, st, seat)
+      : undefined)
     if (!best) return { kind: 'pass', seat }
     return { kind: 'play', seat, cards: best.cards.map((c) => c.id) }
   }

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { RANK, sortCards } from './cards'
 import type { Card } from './cards'
 import { autoplay, newGame, newTributeRound, step, teamOf } from './engine'
-import type { GameState, Seat } from './engine'
+import type { GameState, Seat, Team } from './engine'
 import { mk } from './testutil'
 
 function scenario(q: { A: string[]; B: string[]; C: string[]; D: string[] }, opts?: Parameters<typeof newGame>[0]) {
@@ -366,5 +366,46 @@ describe('牌序：官方淮安口径', () => {
     // 桌面是级牌，2 压不过
     const withTwo = step(s4, { kind: 'play', seat: 1, cards: [fid('2')] })
     expect(withTwo).toBe(s4)
+  })
+})
+
+describe('下游那队赢不了整场（官方规则）', () => {
+  /** 0、2 同队先后走完 → even 队双下 */
+  function doubleDown(dwellerTeam: Team | null): GameState {
+    const { st: base, fid } = scenario({ A: ['3'], B: ['4', '6'], C: ['5'], D: ['7', '2'] })
+    let s = newGame({ hands: base.players.map((p) => p.hand), levels: { even: 14, odd: 2 } })
+    s.dwellerTeam = dwellerTeam
+    for (const [seat, act, spec] of [
+      [0, 'play', '3'],
+      [1, 'pass'],
+      [2, 'play', '5'],
+    ] as [Seat, 'play' | 'pass', string?][]) {
+      s = act === 'play' ? step(s, { kind: 'play', seat, cards: [fid(spec!)] }) : step(s, { kind: 'pass', seat })
+    }
+    return s
+  }
+
+  it('A 级双下：不是下游那队就拿下整场', () => {
+    const s = doubleDown('odd')
+    expect(s.phase).toBe('ended')
+    expect(s.matchWinner).toBe('even')
+  })
+
+  it('A 级双下：这局的下游那队赢不了整场', () => {
+    const s = doubleDown('even')
+    expect(s.phase).toBe('ended')
+    expect(s.matchWinner).toBeNull()
+    expect(s.levels.even).toBe(14) // 级数不升，整场继续
+  })
+
+  it('进贡局把上一局下游那队带进下一局', () => {
+    const st = newGame()
+    st.phase = 'ended'
+    st.players[0]!.finishOrder = 0
+    st.players[2]!.finishOrder = 1
+    st.players[1]!.finishOrder = 2
+    st.players[3]!.finishOrder = 3
+    const t = newTributeRound(st)!
+    expect(t.dwellerTeam).toBe('odd') // 第四名是 3（odd）
   })
 })

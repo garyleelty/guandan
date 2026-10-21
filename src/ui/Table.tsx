@@ -45,7 +45,8 @@ function SeatPanel({ st, seat, mySeat }: { st: GameState; seat: Seat; mySeat: Se
   const p = st.players[seat]!
   const isTurn = st.turn === seat && st.phase === 'playing'
   const mine = teamOf(seat) === teamOf(mySeat)
-  const low = p.hand.length <= 2 && p.finishOrder === null
+  // 官方规则：手中剩余 ≤10 张要报数
+  const low = p.hand.length <= 10 && p.finishOrder === null
   return (
     <div className={['panel min-w-0 px-2.5 py-2', isTurn ? 'border-accent' : ''].join(' ')}>
       <div className="flex items-center gap-2">
@@ -472,10 +473,16 @@ function EndOverlay({ onRematch, onLobby }: { onRematch: () => void; onLobby: ()
   const theirs = teamOf(mySeat) === 'even' ? st.levels.odd : st.levels.even
   const myTeam = teamOf(mySeat)
   const myWins = st.history.filter((r) => r.winner === myTeam).length
+  // A 级双下但上一局下游那队：按官方规则赢不了整场
+  const blockedByDweller =
+    st.matchWinner === null && st.levels[teamOf(winner.seat)] === 14 && st.dwellerTeam === teamOf(winner.seat)
   return (
     <div className="absolute inset-0 z-20 grid place-items-center bg-ground/85 px-4">
       <div className="panel w-[380px] max-w-full p-6">
         <h2 className={`text-xl font-semibold ${isMatch ? 'text-accent' : 'text-ink'}`}>{title}</h2>
+        {blockedByDweller && (
+          <p className="mt-2 text-[13px] text-muted">上一局的下游那队，本局赢不了整场</p>
+        )}
         {st.history.length > 0 && (
           <div className="mt-4">
             <div className="flex items-baseline justify-between">

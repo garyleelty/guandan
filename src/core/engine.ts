@@ -63,6 +63,8 @@ export interface GameState {
   levels: Record<Team, number>
   /** 本局级数（2..14，14=A）：级牌按它算，比较时大于 A */
   handLevel: number
+  /** 上一局下游（第四名）所在的一队：按官方规则，这队本局赢了也不能拿下整场 */
+  dwellerTeam: Team | null
   matchWinner: Team | null
   players: Player[]
   turn: Seat
@@ -104,6 +106,7 @@ export function newGame(opts?: {
     phase: 'playing',
     levels: opts?.levels ? { even: opts.levels.even, odd: opts.levels.odd } : { even: 2, odd: 2 },
     handLevel,
+    dwellerTeam: null,
     matchWinner: null,
     players,
     turn,
@@ -137,6 +140,8 @@ export function newTributeRound(prev: GameState, opts?: { seed?: number }): Game
     levels: { ...prev.levels },
     // 官方口径：本局级数 = 上一局头游（上游）那队的级数
     handLevel: prev.levels[teamOf(head)],
+    // 官方规则：上一局下游（第四名）那队，本局赢了也不能拿下整场
+    dwellerTeam: teamOf(fourth),
     matchWinner: null,
     players: prev.players.map((p) => ({ ...p, hand: [...p.hand] })),
     turn: givers[0]!,
@@ -407,7 +412,8 @@ function maybeEnd(st: GameState): void {
   const delta = partnerRank === 1 ? 3 : partnerRank === 2 ? 2 : 1
   const atA = st.levels[winnerTeam] === 14
   if (atA) {
-    if (delta === 3) st.matchWinner = winnerTeam
+    // A 级双下才能拿下整场；但上一局下游那队本局赢不了整场（官方规则）
+    if (delta === 3 && st.dwellerTeam !== winnerTeam) st.matchWinner = winnerTeam
   } else {
     st.levels[winnerTeam] = Math.min(14, st.levels[winnerTeam] + delta)
   }

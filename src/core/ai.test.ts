@@ -208,3 +208,39 @@ describe('aiTributeMove（进贡阶段）', () => {
     if (move.kind === 'give') expect(move.card).toBe(fid('2'))
   })
 })
+
+describe('记牌（AI 算剩余牌）', () => {
+  /** 把某个点数的 8 张都写进记录，表示「这些都出过了」 */
+  function played(rank: number, seats: Seat[] = [1, 2, 3]): GameState['log'] {
+    const log: GameState['log'] = []
+    for (let i = 0; i < 4; i++) {
+      log.push({
+        seat: seats[i % seats.length]!,
+        ids: [`s${rank}-${i}`, `h${rank}-${i}`],
+        combo: { type: 1, rank },
+      })
+    }
+    return log
+  }
+
+  it('算得出对手压不动时，先甩那手安全牌（对子 9）', () => {
+    const st = newGame({ hands: [mk('9♠', '9♥', '3♠'), mk('4', '5'), mk('6', '7'), mk('8', '9')] })
+    st.log = [...played(14), ...played(13), ...played(12), ...played(11), ...played(10)]
+    const mv = aiMove(st, 0)
+    expect(mv.kind).toBe('play')
+    if (mv.kind === 'play') {
+      expect(mv.cards!.length).toBe(2) // 甩对子，不是单张 3
+    }
+  })
+
+  it('同样的对子，压不动的那手先出（K 对压不动，9 对压得动）', () => {
+    const st = newGame({ hands: [mk('K♠', 'K♥', '9♠', '9♥'), mk('4', '5'), mk('6', '7'), mk('8', '9')] })
+    st.log = played(14) // A 全出完了：对 K 对来说没人压得动
+    const mv = aiMove(st, 0)
+    expect(mv.kind).toBe('play')
+    if (mv.kind === 'play') {
+      const ranks = mv.cards!.map((id) => Number(id.slice(1, id.lastIndexOf('-'))))
+      expect(ranks).toEqual([13, 13]) // 出 K 对，不是 9 对
+    }
+  })
+})
