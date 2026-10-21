@@ -8,6 +8,7 @@ import { identify, beats } from '../core/combos'
 import { RANK_LABEL, cardIdToRank, levelToRank, sortBySuitGroups } from '../core/cards'
 import type { GameState, Seat } from '../core/engine'
 import { teamOf } from '../core/engine'
+import { aiMove } from '../core/ai'
 import { isMuted, playSound, toggleMute } from './sound'
 
 const COMBO_LABEL: Record<number, string> = {
@@ -143,6 +144,7 @@ export function Table() {
   const roomCode = useStore((s) => s.roomCode)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [handMode, setHandMode] = useState<'rank' | 'suit'>('rank')
+  const [hint, setHint] = useState<string | null>(null)
   const [fx, setFx] = useState<0 | 7 | 9>(0)
   const [mute, setMute] = useState(isMuted())
 
@@ -189,6 +191,27 @@ export function Table() {
     dispatch({ kind: 'pass', seat: mySeat })
     setSelected(new Set())
   }
+
+  /** 提示：用 AI 的走法替我选好牌，直接按「出牌」即可。 */
+  const askHint = () => {
+    if (!myTurn) return
+    const mv = aiMove(st, mySeat)
+    if (mv.kind === 'pass') {
+      setSelected(new Set())
+      setHint('建议过牌')
+      return
+    }
+    const ids = mv.cards ?? []
+    const cards = me.hand.filter((c) => ids.includes(c.id))
+    const combo = identify(cards)
+    setSelected(new Set(ids))
+    setHint(combo ? `建议：${COMBO_LABEL[combo.type] ?? ''} ${RANK_LABEL[combo.rank] ?? ''}`.trim() : '建议出牌')
+  }
+
+  // 局面一变，提示就过期
+  useEffect(() => {
+    setHint(null)
+  }, [st.log.length, st.turn])
 
   const lastLog = st.log[st.log.length - 1]
   useEffect(() => {
@@ -307,8 +330,18 @@ export function Table() {
           {myTurn && (
             <span className="chip bg-accent/15 text-accent">{table ? '轮到你' : '轮到你领出'}</span>
           )}
+          {hint ? <span className="text-[13px] text-accent">{hint}</span> : null}
 
           <div className="ml-auto flex items-center gap-2">
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={askHint}
+              disabled={!myTurn}
+              title="按 AI 的走法替你选好牌"
+              data-testid="hint"
+            >
+              提示
+            </button>
             <button
               className="btn btn-ghost btn-sm"
               onClick={() => setHandMode((m) => (m === 'rank' ? 'suit' : 'rank'))}

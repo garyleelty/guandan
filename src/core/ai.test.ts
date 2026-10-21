@@ -17,12 +17,71 @@ function scenario(q: { A: string[]; B: string[]; C: string[]; D: string[] }, opt
 }
 
 describe('aiMove 策略', () => {
+  const ranksOf = (st: ReturnType<typeof scenario>['st'], move: ReturnType<typeof aiMove>) =>
+    move.kind === 'play'
+      ? st.players[move.seat]!
+          .hand.filter((c) => move.cards!.includes(c.id))
+          .map((c) => c.rank)
+          .sort((a, b) => a - b)
+      : []
+
   it('领桌时：出最小的单张', () => {
     const { st, fid } = scenario({ A: ['5', '3'], B: ['7'], C: ['6'], D: ['8'] })
     const move = aiMove(st, 0)
     expect(move.kind).toBe('play')
     if (move.kind === 'play') expect(move.cards).toEqual([fid('3')])
   })
+
+  it('领出优先出对子，而不是打散的单张', () => {
+    const { st } = scenario({ A: ['5', '5', '3'], B: ['7'], C: ['6'], D: ['8'] })
+    expect(ranksOf(st, aiMove(st, 0))).toEqual([5, 5])
+  })
+
+  it('领出优先出顺子（5 张一手，代价最低）', () => {
+    const { st } = scenario({ A: ['3♠', '4♥', '5♣', '6♦', '7♠', '2♠'], B: ['9'], C: ['6'], D: ['8'] })
+    expect(ranksOf(st, aiMove(st, 0))).toEqual([3, 4, 5, 6, 7])
+  })
+
+  it('领出不拆炸弹', () => {
+    const { st } = scenario({ A: ['7', '7', '7', '7', '3'], B: ['9'], C: ['6'], D: ['8'] })
+    expect(ranksOf(st, aiMove(st, 0))).toEqual([3])
+  })
+
+  it('跟牌也不拆炸弹：只留炸弹能压时改出单张', () => {
+    // 对手出了 9，我有 4 张 7 与一张 3：拆炸弹的代价高于过牌
+    const { st, fid } = scenario(
+      { A: ['3'], B: ['4', '4', '4', '4'], C: ['7', '7', '7', '7', '3'], D: ['9', '9', '9', '9'] },
+      { firstLeader: 3 },
+    )
+    let s = step(st, { kind: 'play', seat: 3, cards: [fid('9')] })
+    s = step(s, { kind: 'pass', seat: 0 })
+    s = step(s, { kind: 'pass', seat: 1 })
+    const move = aiMove(s, 2)
+    expect(move.kind).toBe('pass')
+  })
+
+  it('对手只剩 1-2 张 → 果断用炸弹', () => {
+    const { st, fid } = scenario({ A: ['3'], B: ['4'], C: ['8', '8', '8', '8', '7'], D: ['K', '9'] }, { firstLeader: 3 })
+    let s = step(st, { kind: 'play', seat: 3, cards: [fid('K')] })
+    s = step(s, { kind: 'pass', seat: 0 })
+    s = step(s, { kind: 'pass', seat: 1 })
+    const move = aiMove(s, 2)
+    expect(move.kind).toBe('play')
+    if (move.kind === 'play') expect(move.cards!.length).toBe(4)
+  })
+
+  it('好 2 不赢：单张 2 留着不打（对手还远时过牌）', () => {
+    const { st, fid } = scenario(
+      { A: ['3'], B: ['4', '4', '4', '4'], C: ['2', '5'], D: ['K', '9', '9', '9'] },
+      { firstLeader: 3 },
+    )
+    let s = step(st, { kind: 'play', seat: 3, cards: [fid('K')] })
+    s = step(s, { kind: 'pass', seat: 0 })
+    s = step(s, { kind: 'pass', seat: 1 })
+    const move = aiMove(s, 2)
+    expect(move.kind).toBe('pass')
+  })
+
   it('队友坐庄 → 主动过，不压队友', () => {
     const { st, fid } = scenario({ A: ['3'], B: ['4'], C: ['5'], D: ['6'] })
     // A 头游领出 3 后，B 过、C 的回合：桌面庄家是队友 A → C 应过
