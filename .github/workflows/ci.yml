@@ -13,4 +13,6 @@ jobs:
       - run: bun install
       - run: bun run typecheck
       - run: bun run test
+      # 压力跑：连打整场查规则边角（进贡重复牌那类问题就是这么抓出来的）
+      - run: bun run scripts/soak-matches.ts 40
       - run: bun run build

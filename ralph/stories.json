@@ -764,6 +764,33 @@
         }
       ],
       "status": "done"
+    },
+    {
+      "id": "S30",
+      "title": "压力跑接进 CI（自动抓规则边角）",
+      "criteria": [
+        {
+          "id": "S30-1",
+          "desc": "压力跑逻辑抽成模块（src/core/soak.ts），脚本与测试共用",
+          "check": "cmd"
+        },
+        {
+          "id": "S30-2",
+          "desc": "单测里连打 8 场整场（约 3 秒），纳入 bun run test",
+          "check": "cmd"
+        },
+        {
+          "id": "S30-3",
+          "desc": "CI 增加一步：bun run scripts/soak-matches.ts 40",
+          "check": "cmd"
+        },
+        {
+          "id": "S30-4",
+          "desc": "难度轮换（简单/普通/难都跑），不变量含「手里不能有重复牌」",
+          "check": "cmd"
+        }
+      ],
+      "status": "done"
     }
   ]
 }

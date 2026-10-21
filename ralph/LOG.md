@@ -353,3 +353,14 @@
 - 压力跑：100 场整场、1849 局，0 问题（修之前每一场都会卡在进贡后）。
 - 验收：147 tests 全绿；九条真浏览器冒烟全过；inspect 0 FAIL 0 WARN，lint 0 FAIL，
   oxlint 0 warning。
+
+## S30 压力跑接进 CI done
+- 上一轮靠手动跑压力跑才抓到进贡重复牌的 bug——这种事不能靠「记得跑」。
+- 现在：
+  ① 压力跑逻辑抽成模块（src/core/soak.ts），脚本与测试共用一份；
+  ② 单测里连打 8 场整场（约 3 秒），随 `bun run test` 一起跑；
+  ③ CI 多一步 `bun run scripts/soak-matches.ts 40`（约 15 秒）；
+  ④ 难度轮换（简单/普通/难都跑到，难档才有记牌逻辑）；
+  ⑤ 不变量除了级数、名次，现在还查「任何人的手里不能有同一张牌两次」。
+- 验收：148 tests 全绿（新增 1 条压力跑测试）；CI 里 40 场 704 局 0 问题；
+  inspect 0 FAIL 0 WARN，lint 0 FAIL，oxlint 0 warning。
