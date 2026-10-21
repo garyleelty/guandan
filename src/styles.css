@@ -38,6 +38,10 @@
   --animate-pop: pop 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
   --animate-flash: flash 1s ease-in-out infinite;
   --animate-deal: deal 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+  --animate-land-bottom: land-bottom 0.2s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+  --animate-land-top: land-top 0.2s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+  --animate-land-left: land-left 0.2s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+  --animate-land-right: land-right 0.2s cubic-bezier(0.2, 0.9, 0.3, 1) both;
 
   @keyframes shake {
     0%, 100% { transform: translate(0, 0); }
@@ -57,6 +61,23 @@
   @keyframes deal {
     0% { transform: translateY(28px) scale(0.92); opacity: 0; }
     100% { transform: translateY(0) scale(1); opacity: 1; }
+  }
+  /* 出牌从座位方向落到桌心：只做反馈，不做入场秀 */
+  @keyframes land-bottom {
+    0% { transform: translateY(26px) scale(0.94); opacity: 0; }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
+  }
+  @keyframes land-top {
+    0% { transform: translateY(-26px) scale(0.94); opacity: 0; }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
+  }
+  @keyframes land-left {
+    0% { transform: translateX(-30px) scale(0.94); opacity: 0; }
+    100% { transform: translateX(0) scale(1); opacity: 1; }
+  }
+  @keyframes land-right {
+    0% { transform: translateX(30px) scale(0.94); opacity: 0; }
+    100% { transform: translateX(0) scale(1); opacity: 1; }
   }
 }
 

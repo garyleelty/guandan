@@ -187,13 +187,15 @@ export function Table() {
   const canAnti = tributeTurn && tribute?.step === 'give' && canAntiTribute(me.hand)
   const canPass = myTurn && !!table && st.trick.pending.includes(mySeat)
 
-  const toggle = (id: string) =>
+  const toggle = (id: string) => {
+    playSound('select')
     setSelected((prevSet) => {
       const nextSet = new Set(prevSet)
       if (nextSet.has(id)) nextSet.delete(id)
       else nextSet.add(id)
       return nextSet
     })
+  }
 
   const play = () => {
     if (!selCombo || !canPlay) return
@@ -262,19 +264,31 @@ export function Table() {
       const t = setTimeout(() => setFx(0), 1100)
       return () => clearTimeout(t)
     }
-    playSound('play')
+    playSound(combo === null ? 'pass' : 'play')
   }, [st.log.length])
 
   useEffect(() => {
     if (st.phase === 'ended') playSound('win')
     // 进贡阶段清掉上一局的特效，别压在贡牌面板上
-    if (st.phase === 'tribute') setFx(0)
+    if (st.phase === 'tribute') {
+      setFx(0)
+      playSound('tribute')
+    }
   }, [st.phase])
 
   const centerCards = table?.combo.cards ?? []
   const trickCaption = table
     ? `${st.players[table.seat]!.name} · ${COMBO_LABEL[table.combo.type] ?? ''}`
     : null
+  /** 出牌从哪个方向落到桌心：自己 / 搭档 / 左家 / 右家 */
+  const landClass = (() => {
+    if (!table) return 'animate-pop'
+    const rel = (table.seat - mySeat + 4) % 4
+    if (rel === 0) return 'animate-land-bottom'
+    if (rel === 2) return 'animate-land-top'
+    if (rel === 3) return 'animate-land-left'
+    return 'animate-land-right'
+  })()
 
   return (
     <div className="flex h-full flex-col overflow-x-hidden bg-ground">
@@ -338,7 +352,7 @@ export function Table() {
             <div className="flex flex-col items-center gap-3">
               <div className="flex flex-wrap items-end justify-center gap-1.5">
                 {centerCards.map((c) => (
-                  <div key={c.id} className="animate-pop">
+                  <div key={c.id} className={landClass}>
                     <CardFace card={c} size="sm" />
                   </div>
                 ))}

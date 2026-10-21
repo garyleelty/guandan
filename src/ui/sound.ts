@@ -46,7 +46,7 @@ function noise(dur: number, gain: number, when = 0): void {
   src.start(t0)
 }
 
-export type SoundKind = 'play' | 'bomb' | 'win'
+export type SoundKind = 'play' | 'bomb' | 'win' | 'select' | 'pass' | 'tribute'
 
 export function playSound(kind: SoundKind): void {
   if (muted) return
@@ -58,6 +58,16 @@ export function playSound(kind: SoundKind): void {
       noise(0.5, 0.22)
       tone(120, 0.42, 'sawtooth', 0.12, 0, 42)
       tone(70, 0.5, 'square', 0.08, 0.03, 30)
+    } else if (kind === 'select') {
+      // 选牌：轻轻一声咔哒
+      tone(1500, 0.03, 'square', 0.018)
+    } else if (kind === 'pass') {
+      // 过牌：闷一下
+      tone(210, 0.09, 'sine', 0.05, 0, 150)
+    } else if (kind === 'tribute') {
+      // 进贡：两声上行
+      tone(660, 0.12, 'triangle', 0.05)
+      tone(990, 0.16, 'triangle', 0.045, 0.1)
     } else {
       ;[523, 659, 784, 1047].forEach((f, i) => tone(f, 0.16, 'triangle', 0.07, i * 0.11))
     }
