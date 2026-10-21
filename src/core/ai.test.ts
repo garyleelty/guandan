@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { sortCards } from './cards'
 import type { Card } from './cards'
-import { newGame, step, autoplay, legalMoves } from './engine'
+import { newGame, nextRound, step, autoplay, legalMoves } from './engine'
 import type { GameState, Seat } from './engine'
 import { aiMove, aiTributeMove } from './ai'
 import { mk } from './testutil'
@@ -273,4 +273,56 @@ describe('AI 难度', () => {
       expect(ranks).toEqual([9]) // 拆掉对 9 出一张 9
     }
   })
+})
+
+/**
+ * 难度对打：座位 0 一档、另外三个座位另一档，看座位 0 所在队的胜率。
+ * 普通与难档没有随机抖动，结果确定，可以当断言用（简单档有抖动，只看趋势）。
+ */
+function duel(levelA: 0 | 1 | 2, levelB: 0 | 1 | 2, matches: number): { wins: number; rounds: number } {
+  let wins = 0
+  let rounds = 0
+  for (let seed = 1; seed <= matches; seed++) {
+    let st = nextRound(null, { seed, names: ['A', 'B', 'C', 'D'], isBot: [true, true, true, true] })
+    let guard = 0
+    while (guard++ < 200000) {
+      if (st.phase === 'playing') {
+        const seat = st.turn
+        const saved = st.aiLevel
+        st.aiLevel = seat === 0 ? levelA : levelB
+        const mv = aiMove(st, seat)
+        st.aiLevel = saved
+        if (!mv) break
+        st = step(st, mv)
+        continue
+      }
+      if (st.phase === 'tribute') {
+        const mv = aiTributeMove(st, st.turn)
+        if (!mv) break
+        st = step(st, mv)
+        continue
+      }
+      if (st.phase === 'ended') {
+        rounds++
+        const winner = st.players.find((p) => p.finishOrder === 0)!
+        if (winner.seat === 0 || winner.seat === 2) wins++
+        break
+      }
+      break
+    }
+  }
+  return { wins, rounds }
+}
+
+describe('AI 难度阶梯（对打验证）', () => {
+  it('难档应该比普通档强（固定种子，结果确定）', () => {
+    const r = duel(2, 1, 60)
+    expect(r.rounds).toBeGreaterThan(50)
+    expect(r.wins / r.rounds).toBeGreaterThan(0.5)
+  }, 120_000)
+
+  it('普通档应该比简单档强', () => {
+    const r = duel(1, 0, 40)
+    expect(r.wins / r.rounds).toBeGreaterThan(0.6)
+  }, 120_000)
 })

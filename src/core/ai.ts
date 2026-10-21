@@ -66,7 +66,7 @@ function pickCheapest(
   lead: boolean,
   level: number,
   risk?: (m: Combo) => number,
-  opts?: { breakScale?: number; jitter?: number },
+  opts?: { breakScale?: number; jitter?: number; blockLead?: boolean },
 ): Combo | null {
   let best: Combo | null = null
   let bestCost = Infinity
@@ -77,6 +77,7 @@ function pickCheapest(
       (lead ? (LEAD_BONUS[m.type] ?? 0) : SPECIAL.has(m.type) ? SPECIAL_FOLLOW_COST : 0) +
       breakPenalty(m, shape, level) * breakScale +
       (risk ? risk(m) * RISK_COST : 0) +
+      (opts?.blockLead && m.type === ComboType.SINGLE ? (14 - m.rank) * 20 : 0) +
       (opts?.jitter ? (Math.random() - 0.5) * opts.jitter : 0)
     if (cost < bestCost || (cost === bestCost && best !== null && m.rank < best.rank)) {
       best = m
@@ -174,14 +175,16 @@ export function aiMove(st: GameState, seat: Seat): Action {
   const shape = handShape(hand, st.handLevel)
   // 难度：0 简单（拆牌代价打折、选择带随机）· 1 普通 · 2 难（加记牌风险）
   const level = st.aiLevel ?? 1
-  const breakScale = level === 0 ? 0.35 : 1
-  const jitter = level === 0 ? 6 : 0
+  const breakScale = level === 0 ? 0 : 1
+  const jitter = level === 0 ? 10 : 0
   const mine = teamOf(seat)
   const oppMin = Math.min(
     ...st.players.filter((p) => teamOf(p.seat) !== mine).map((p) => p.hand.length),
   )
   // 紧急：对手只剩 1-2 张（要抢头游），或我只剩一张（必须打完）
   const urgent = oppMin <= 2 || hand.length <= 1
+  // 难档：对手只剩一张时，领出改用大牌——他多半压不动，别把小牌送出去让他走完
+  const blockLead = level >= 2 && oppMin <= 1
 
   if (!table) {
     // 记牌：算得出对手可能压得动，这一手就贵一点
@@ -195,7 +198,7 @@ export function aiMove(st: GameState, seat: Seat): Action {
       true,
       st.handLevel,
       level >= 2 && possible ? (m) => beatRisk(m, possible, st, seat) : undefined,
-      { breakScale, jitter },
+      { breakScale, jitter, blockLead },
     )
     if (!best) return { kind: 'pass', seat }
     return { kind: 'play', seat, cards: best.cards.map((c) => c.id) }
@@ -204,7 +207,7 @@ export function aiMove(st: GameState, seat: Seat): Action {
   // 队友坐庄 → 让他打
   if (teamOf(table.seat) === mine) return { kind: 'pass', seat }
 
-  const best = pickCheapest(moves, shape, false, st.handLevel, undefined, { breakScale })
+  const best = pickCheapest(moves, shape, false, st.handLevel, undefined, { breakScale, blockLead })
   if (!best) return { kind: 'pass', seat }
 
   // 只剩炸弹能压，而对手还早 → 留着当后手

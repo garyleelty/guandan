@@ -29,7 +29,7 @@ const MOTIF = (() => {
 const AI_LEVELS: { v: 0 | 1 | 2; label: string; hint: string }[] = [
   { v: 0, label: '简单', hint: '会拆牌、偶尔想不起' },
   { v: 1, label: '普通', hint: '会算牌型，不算剩余牌' },
-  { v: 2, label: '难', hint: '算剩余牌，压得动就压' },
+  { v: 2, label: '难', hint: '算剩余牌，还会封对手' },
 ]
 
 export function Lobby() {
