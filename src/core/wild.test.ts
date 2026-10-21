@@ -71,3 +71,47 @@ describe('逢人配在合法走法里', () => {
     expect(straight).toBeDefined()
   })
 })
+
+describe('两张逢人配（分占两格）', () => {
+  it('两张万能配各顶一格，凑成顺子', () => {
+    // ♥7 与 ♥7（两副牌各一张）配 3、4、5 → 3-7 顺子
+    expect(identify(mk('7♥', '7♥', '3♠', '4♣', '5♦'), L)).toMatchObject({
+      type: ComboType.STRAIGHT,
+      rank: 7,
+    })
+  })
+  it('两张万能配也能凑连对（3 对连续）', () => {
+    expect(identify(mk('7♥', '7♥', '3♠', '3♣', '4♠', '5♠'), L)).toMatchObject({
+      type: ComboType.PAIRS,
+      rank: 5,
+    })
+  })
+  it('两张万能配 + 三张同点仍然是炸弹（牌型强的解释优先）', () => {
+    expect(identify(mk('7♥', '7♥', '8', '8', '8'), L)).toMatchObject({
+      type: ComboType.BOMB,
+      rank: 8,
+      count: 5,
+    })
+  })
+  it('引擎把「两张万能配凑顺子」列为合法出牌', () => {
+    const st = newGame({
+      hands: [mk('7♥', '7♥', '3♠', '4♣', '5♦'), mk('9'), mk('9'), mk('9')],
+    })
+    st.handLevel = L
+    const moves = legalMoves(st, 0)
+    const twoWild = moves.find(
+      (m) => m.type === ComboType.STRAIGHT && m.cards.filter((c) => c.id.startsWith('h7')).length === 2,
+    )
+    expect(twoWild).toBeTruthy()
+    expect(twoWild!.cards).toHaveLength(5)
+  })
+  it('同样的牌不会生成重复的出牌', () => {
+    const st = newGame({
+      hands: [mk('7♥', '7♥', '3♠', '4♣', '5♦'), mk('9'), mk('9'), mk('9')],
+    })
+    st.handLevel = L
+    const moves = legalMoves(st, 0)
+    const keys = moves.map((m) => m.cards.map((c) => c.id).sort().join(','))
+    expect(new Set(keys).size).toBe(keys.length)
+  })
+})

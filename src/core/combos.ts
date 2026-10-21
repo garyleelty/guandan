@@ -109,11 +109,23 @@ export function identify(cards: Card[], level: number): Combo | null {
       }
     }
   } else {
-    // 两张万能配：先按同点替代（成对子/三张/炸弹）
+    // 两张万能配：同点替代（成对子/三张/炸弹）
     for (const r of rankOptions) {
       const sub = cards.map((c) => (isWild(c, level) ? { ...c, rank: r } : c))
       const combo = identifyPlain(sub, level)
       if (combo) combos.push({ ...combo, cards })
+    }
+    // 分占两格：两张万能配各顶一个点数（顺子/连对/钢板都能这么凑）
+    const [w1, w2] = wilds
+    for (const r1 of rankOptions) {
+      for (const r2 of rankOptions) {
+        if (r1 === r2) continue
+        const sub = cards.map((c) =>
+          c.id === w1.id ? { ...c, rank: r1 } : c.id === w2.id ? { ...c, rank: r2 } : c,
+        )
+        const combo = identifyPlain(sub, level)
+        if (combo) combos.push({ ...combo, cards })
+      }
     }
   }
   if (combos.length === 0) return identifyPlain(cards, level)

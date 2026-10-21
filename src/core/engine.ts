@@ -452,6 +452,44 @@ function wildCandidates(hand: Card[], level: number): Card[][] {
   const levelRank = levelToRank(level)
   const windows = straightWindows()
 
+  // 两张万能配分占两格：顺子缺两格 / 连对缺两对 / 钢板缺两组
+  if (wilds.length >= 2) {
+    const [w1, w2] = wilds
+    const rest = hand.filter((c) => c.id !== w1.id && c.id !== w2.id)
+    const byRank = new Map<number, Card[]>()
+    for (const c of rest) {
+      const arr = byRank.get(c.rank) ?? []
+      arr.push(c)
+      byRank.set(c.rank, arr)
+    }
+    // 顺子：缺两个点数
+    for (const win of windows) {
+      const missing = win.filter((r) => !byRank.has(r))
+      if (missing.length !== 2) continue
+      const picked = win.filter((r) => byRank.has(r)).map((r) => byRank.get(r)![0]!)
+      if (picked.length !== 3) continue
+      out.push([w1, w2, ...picked])
+    }
+    // 连对（连续三对）与钢板（连续两组三张）：缺两张的位置由万能配补
+    const seqWindows = (size: number, groups: number) => {
+      for (let lo = RANK.TWO; lo + groups - 1 <= RANK.ACE; lo++) {
+        const win = Array.from({ length: groups }, (_, i) => lo + i)
+        const picked: Card[] = []
+        let deficit = 0
+        for (const r of win) {
+          const cs = byRank.get(r) ?? []
+          const take = Math.min(size, cs.length)
+          deficit += size - take
+          picked.push(...cs.slice(0, take))
+        }
+        if (deficit !== 2) continue
+        out.push([w1, w2, ...picked])
+      }
+    }
+    seqWindows(2, 3) // 连对
+    seqWindows(3, 2) // 钢板
+  }
+
   for (const w of wilds) {
     const rest = hand.filter((c) => c.id !== w.id)
     const byRank = new Map<number, Card[]>()
@@ -493,7 +531,17 @@ function wildCandidates(hand: Card[], level: number): Card[][] {
       }
     }
   }
-  return out
+  // 去重：同一组牌可能由不同窗口或不同万能配顺序生成出来
+  const seen = new Set<string>()
+  return out.filter((cards) => {
+    const key = cards
+      .map((c) => c.id)
+      .sort()
+      .join(',')
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }
 
 export function legalMoves(st: GameState, seat: Seat): Combo[] {
