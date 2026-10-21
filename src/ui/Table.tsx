@@ -302,7 +302,7 @@ export function Table() {
               <div className="flex flex-wrap items-end justify-center gap-1.5">
                 {centerCards.map((c) => (
                   <div key={c.id} className="animate-pop">
-                    <CardFace card={c} size="xs" />
+                    <CardFace card={c} size="sm" />
                   </div>
                 ))}
               </div>

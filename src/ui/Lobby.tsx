@@ -90,7 +90,7 @@ export function Lobby() {
         <div className="panel p-5">
           <div className="flex items-end gap-1.5">
             {MOTIF.map((c) => (
-              <CardFace key={c.id} card={c} size="xs" />
+              <CardFace key={c.id} card={c} size="sm" />
             ))}
           </div>
           <h2 className="mt-5 text-base text-ink">玩法速览</h2>
