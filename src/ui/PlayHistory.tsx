@@ -14,6 +14,53 @@ const FINISH_LABEL = ['头游', '二游', '三游', '四游']
  * 牌谱：这一局每一手出的真实牌面。
  * 出牌记录条只写「谁出了什么牌型」，这里能看清是哪几张——复盘、算账、记错牌都靠它。
  */
+export function PlayList({
+  log,
+  names,
+  emptyText = '这一局还没有人出牌',
+}: {
+  log: GameState['log']
+  names: string[]
+  emptyText?: string
+}) {
+  const finished = log.length
+  return finished === 0 ? (
+    <p className="mt-6 text-[13px] text-faint">{emptyText}</p>
+  ) : (
+    <ol className="mt-3 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-1">
+      {log.map((e, i) => {
+        const cards = e.ids.map(cardFromId)
+        return (
+          <li key={i} className="flex shrink-0 items-start gap-2 overflow-hidden border-b border-rule pb-1.5">
+            <span className="num w-7 shrink-0 pt-1 text-[12px] text-faint">{i + 1}</span>
+            <span className="w-16 shrink-0 pt-1 text-[13px] text-muted">{names[e.seat] ?? ''}</span>
+            {e.combo === null ? (
+              <span className="pt-1 text-[13px] text-faint">过</span>
+            ) : (
+              <>
+                <span className="w-16 shrink-0 pt-1 text-[13px] text-ink">
+                  {COMBO_LABEL[e.combo.type] ?? ''}
+                  {e.combo.type !== 9 && (
+                    <span className="num text-muted">
+                      {' '}
+                      {e.combo.rank === 15 ? '级牌' : (RANK_LABEL[e.combo.rank] ?? '')}
+                    </span>
+                  )}
+                </span>
+                <span className="flex min-w-0 flex-1 flex-wrap items-end gap-1">
+                  {cards.map((c) => (
+                    <CardFace key={c.id} card={c} size="xs" />
+                  ))}
+                </span>
+              </>
+            )}
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
 export function PlayHistory({ st, onClose }: { st: GameState; onClose: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -56,41 +103,7 @@ export function PlayHistory({ st, onClose }: { st: GameState; onClose: () => voi
           </div>
         )}
 
-        {st.log.length === 0 ? (
-          <p className="mt-6 text-[13px] text-faint">这一局还没有人出牌</p>
-        ) : (
-          <ol className="mt-3 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-1">
-            {st.log.map((e, i) => {
-              const cards = e.ids.map(cardFromId)
-              return (
-                <li key={i} className="flex shrink-0 items-start gap-2 overflow-hidden border-b border-rule pb-1.5">
-                  <span className="num w-7 shrink-0 pt-1 text-[12px] text-faint">{i + 1}</span>
-                  <span className="w-16 shrink-0 pt-1 text-[13px] text-muted">{st.players[e.seat]!.name}</span>
-                  {e.combo === null ? (
-                    <span className="pt-1 text-[13px] text-faint">过</span>
-                  ) : (
-                    <>
-                      <span className="w-16 shrink-0 pt-1 text-[13px] text-ink">
-                        {COMBO_LABEL[e.combo.type] ?? ''}
-                        {e.combo.type !== 9 && (
-                          <span className="num text-muted">
-                            {' '}
-                            {e.combo.rank === 15 ? '级牌' : (RANK_LABEL[e.combo.rank] ?? '')}
-                          </span>
-                        )}
-                      </span>
-                      <span className="flex min-w-0 flex-1 flex-wrap items-end gap-1">
-                        {cards.map((c) => (
-                          <CardFace key={c.id} card={c} size="xs" />
-                        ))}
-                      </span>
-                    </>
-                  )}
-                </li>
-              )
-            })}
-          </ol>
-        )}
+        <PlayList log={st.log} names={st.players.map((p) => p.name)} />
       </div>
     </div>
   )

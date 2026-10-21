@@ -12,6 +12,7 @@ import { aiMove } from '../core/ai'
 import { isMuted, playSound, toggleMute } from './sound'
 import { TributePanel } from './TributePanel'
 import { PlayHistory } from './PlayHistory'
+import { encodeReplay, replayFromState } from '../core/replay'
 import { canAntiTribute } from '../core/engine'
 
 const COMBO_LABEL: Record<number, string> = {
@@ -507,6 +508,18 @@ function EndOverlay({ onRematch, onLobby }: { onRematch: () => void; onLobby: ()
   const theirs = teamOf(mySeat) === 'even' ? st.levels.odd : st.levels.even
   const myTeam = teamOf(mySeat)
   const myWins = st.history.filter((r) => r.winner === myTeam).length
+  const [shared, setShared] = useState(false)
+  const share = async () => {
+    try {
+      const frag = await encodeReplay(replayFromState(st))
+      const url = `${location.origin}${location.pathname}?replay=${frag}`
+      await navigator.clipboard?.writeText(url)
+      setShared(true)
+      setTimeout(() => setShared(false), 2200)
+    } catch {
+      setShared(false)
+    }
+  }
   // A 级双下但上一局下游那队：按官方规则赢不了整场
   const blockedByDweller =
     st.matchWinner === null && st.levels[teamOf(winner.seat)] === 14 && st.dwellerTeam === teamOf(winner.seat)
@@ -556,7 +569,17 @@ function EndOverlay({ onRematch, onLobby }: { onRematch: () => void; onLobby: ()
           <div className="mb-2 text-[13px] text-muted">级牌阶梯</div>
           <LevelLadder mine={mine} theirs={theirs} withLabels />
         </div>
-        <div className="mt-5 flex gap-2">
+        <div className="mt-3 flex gap-2">
+          <button
+            className="btn btn-ghost flex-1"
+            onClick={share}
+            data-testid="share-round"
+            title="把这局的牌谱做成链接发给朋友"
+          >
+            {shared ? '链接已复制' : '分享这局'}
+          </button>
+        </div>
+        <div className="mt-2 flex gap-2">
           {mode === 'guest' ? (
             <span className="flex h-9 flex-1 items-center justify-center rounded-control border border-line text-[13px] text-muted">
               等待房主开下一局

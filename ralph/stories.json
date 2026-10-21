@@ -494,6 +494,33 @@
         }
       ],
       "status": "done"
+    },
+    {
+      "id": "S20",
+      "title": "牌局分享：把一局做成复盘链接",
+      "criteria": [
+        {
+          "id": "S20-1",
+          "desc": "复盘数据编码：gzip + base64url，一局约 100 手压到 800 字符左右",
+          "check": "cmd"
+        },
+        {
+          "id": "S20-2",
+          "desc": "结算页「分享这局」按钮：生成链接并复制",
+          "check": "cmd"
+        },
+        {
+          "id": "S20-3",
+          "desc": "?replay= 链接打开是独立复盘页：每手真实牌面 + 牌型统计 + 级数",
+          "check": "cmd"
+        },
+        {
+          "id": "S20-4",
+          "desc": "验收：125 tests + 真浏览器端到端分享 + 手机端不溢出 + inspect 0 FAIL 0 WARN",
+          "check": "cmd"
+        }
+      ],
+      "status": "done"
     }
   ]
 }

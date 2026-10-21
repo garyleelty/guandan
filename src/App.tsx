@@ -1,16 +1,32 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useStore } from './state/store'
 import { Lobby } from './ui/Lobby'
 import { Table } from './ui/Table'
 import { RoomView } from './ui/RoomView'
 import { aiMove, aiTributeMove } from './core/ai'
 import { joinRoom } from './net/guest'
+import { decodeReplay, encodeReplay, replayFromState, type ReplayData } from './core/replay'
+import { ReplayView } from './ui/ReplayView'
 import { codeFromUrl } from './net/room'
 
 export default function App() {
   const screen = useStore((s) => s.screen)
   const match = useStore((s) => s.match)
   const mode = useStore((s) => s.mode)
+  const [replay, setReplay] = useState<ReplayData | null>(null)
+
+  // 分享出来的复盘链接：?replay=xxx
+  useEffect(() => {
+    const frag = new URLSearchParams(window.location.search).get('replay')
+    if (!frag) return
+    let alive = true
+    void decodeReplay(frag).then((d) => {
+      if (alive && d) setReplay(d)
+    })
+    return () => {
+      alive = false
+    }
+  }, [])
 
   useEffect(() => {
     const r = codeFromUrl()
@@ -60,8 +76,10 @@ export default function App() {
   useEffect(() => {
     ;(window as unknown as Record<string, unknown>).__gdAi = aiMove
     ;(window as unknown as Record<string, unknown>).__gdTribute = aiTributeMove
+    ;(window as unknown as Record<string, unknown>).__gdReplay = { encodeReplay, replayFromState }
   }, [])
 
+  if (replay) return <ReplayView data={replay} />
   if (screen === 'room') return <RoomView />
   if (screen === 'table' && match) return <Table />
   return <Lobby />
