@@ -197,7 +197,7 @@ export function Table() {
   const askHint = () => {
     if (!myTurn) return
     const mv = aiMove(st, mySeat)
-    if (mv.kind === 'pass') {
+    if (mv.kind !== 'play') {
       setSelected(new Set())
       setHint('建议过牌')
       return

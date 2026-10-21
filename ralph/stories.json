@@ -236,6 +236,33 @@
         }
       ],
       "status": "done"
+    },
+    {
+      "id": "S11",
+      "title": "进贡还贡（引擎 + 规则）",
+      "criteria": [
+        {
+          "id": "S11-1",
+          "desc": "规则以官方口径为准（维基引《江苏掼蛋竞赛简易规则》）：只有下游进贡、收贡方还牌、还牌后下游领出、双下游两人各交、大的给头游",
+          "check": "manual"
+        },
+        {
+          "id": "S11-2",
+          "desc": "引擎：newTributeRound + give 动作（交贡/抗贡/还牌）+ 贡牌进收贡者手牌、每家仍 27 张",
+          "check": "cmd"
+        },
+        {
+          "id": "S11-3",
+          "desc": "10 条新单测覆盖进贡者认定、贡牌流向、还牌上限、抗贡、双下游分配与领出",
+          "check": "cmd"
+        },
+        {
+          "id": "S11-4",
+          "desc": "UI 与联机接线（下一轮）：进贡视图、AI 交贡/还牌、SerializedState 同步、store 改走进贡局",
+          "check": "manual"
+        }
+      ],
+      "status": "in_progress"
     }
   ]
 }

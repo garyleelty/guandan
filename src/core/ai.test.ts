@@ -126,7 +126,7 @@ describe('aiMove 全对局语义', () => {
       while (s.phase === 'playing' && guard++ < 5000) {
         const seat = s.turn
         const move = aiMove(s, seat)
-        if (move.kind === 'pass') {
+        if (move.kind !== 'play') {
           expect(s.trick.table).not.toBeNull()
           s = step(s, { kind: 'pass', seat })
         } else {
