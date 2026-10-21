@@ -1,25 +1,54 @@
-import type { GameState, Seat } from './engine'
+import type { GameState, Seat, Team } from './engine'
+import { archivedRounds } from './matchlog'
 
-/** 一局的复盘数据：够重现「谁在什么时候出了什么牌」。 */
-export type ReplayData = {
-  /** 数据版本 */
+/** 一手牌的复盘记录 */
+type Play = { s: Seat; c: string[]; t: number | null; r: number }
+
+/** 旧版数据（v1）：只有一局 */
+export type ReplayDataV1 = {
   v: 1
-  /** 四个座位的名字 */
   n: string[]
-  /** 打完时的两队级数 */
   l: [number, number]
-  /** 每一手：座位、牌 id、牌型 */
-  g: { s: Seat; c: string[]; t: number | null; r: number }[]
+  g: Play[]
 }
 
-/** 从当前状态取「刚打完的这一局」作为复盘数据。 */
+/** 新版数据（v2）：整场，每一局分开 */
+export type ReplayDataV2 = {
+  v: 2
+  /** 四个座位的名字 */
+  n: string[]
+  /** 每一局：出牌记录 + 谁赢 + 升了几级 */
+  rounds: { g: Play[]; w: Team | null; d: number }[]
+  /** 打完时的两队级数 */
+  l: [number, number]
+}
+
+export type ReplayData = ReplayDataV1 | ReplayDataV2
+
+const toPlays = (log: GameState['log']): Play[] =>
+  log.map((e) => ({ s: e.seat, c: e.ids, t: e.combo?.type ?? null, r: e.combo?.rank ?? 0 }))
+
+/**
+ * 从当前状态取复盘数据：已经打完的那几局（客户端攒的）+ 当前这一局。
+ * 只有当前一局时退化成 v1（短链接），整场就用 v2。
+ */
 export function replayFromState(st: GameState): ReplayData {
-  return {
-    v: 1,
-    n: st.players.map((p) => p.name),
-    l: [st.levels.even, st.levels.odd],
-    g: st.log.map((e) => ({ s: e.seat, c: e.ids, t: e.combo?.type ?? null, r: e.combo?.rank ?? 0 })),
+  const n = st.players.map((p) => p.name)
+  const l: [number, number] = [st.levels.even, st.levels.odd]
+  const done = archivedRounds()
+  if (done.length === 0) {
+    return { v: 1, n, l, g: toPlays(st.log) }
   }
+  const rounds = done.map((log, i) => {
+    const h = st.history[i]
+    const winner: Team | null = h ? h.winner : null
+    return { g: toPlays(log), w: winner, d: h?.delta ?? 0 }
+  })
+  // 刚打完一局时，状态里的 log 就是这一局（已经归档过了），别再追加一遍
+  if (st.phase !== 'ended') {
+    rounds.push({ g: toPlays(st.log), w: null, d: 0 })
+  }
+  return { v: 2, n, rounds, l }
 }
 
 function toBase64Url(bytes: Uint8Array): string {
@@ -71,8 +100,10 @@ export async function decodeReplay(fragment: string): Promise<ReplayData | null>
   try {
     const json = await gunzip(fromBase64Url(fragment))
     const data = JSON.parse(new TextDecoder().decode(json)) as ReplayData
-    if (data?.v !== 1 || !Array.isArray(data.g) || !Array.isArray(data.n)) return null
-    return data
+    if (!Array.isArray(data?.n)) return null
+    if (data.v === 1 && Array.isArray(data.g)) return data
+    if (data.v === 2 && Array.isArray(data.rounds)) return data
+    return null
   } catch {
     return null
   }

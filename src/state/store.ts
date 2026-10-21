@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { trackMatchLog } from '../core/matchlog'
 import { nextRound, step } from '../core/engine'
 import type { Action, GameState, Seat } from '../core/engine'
 
@@ -104,6 +105,12 @@ export const useStore = create<Store>((set, get) => ({
   },
   resetTransient: () => set({ guestLost: false, joining: false }),
 }))
+
+// 整场出牌记录在客户端攒：引擎每局重置 log，攒起来才能分享整场
+useStore.subscribe((state) => {
+  trackMatchLog(state.match)
+})
+
 
 export const dispatchAt = (a: Action): void => useStore.getState().dispatch(a)
 

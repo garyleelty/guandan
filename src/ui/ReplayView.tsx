@@ -1,18 +1,28 @@
+import { useState } from 'react'
 import { PlayList } from './PlayHistory'
-import type { ReplayData } from '../core/replay'
+import type { ReplayData, ReplayDataV1, ReplayDataV2 } from '../core/replay'
 
 const COMBO_LABEL: Record<number, string> = {
   0: '单张', 1: '对子', 2: '三张', 3: '三带二', 4: '顺子', 5: '连对', 6: '钢板',
   7: '炸弹', 8: '同花顺', 9: '天炸',
 }
 
-/** 复盘页：别人点开分享链接看到的一局。 */
+/** 复盘页：别人点开分享链接看到的那一局（v1）或整场（v2）。 */
 export function ReplayView({ data }: { data: ReplayData }) {
-  const log = data.g.map((e) => ({
+  const v2 = data.v === 2 ? (data as ReplayDataV2) : null
+  const rounds = v2
+    ? v2.rounds
+    : [{ g: (data as { g: ReplayDataV1['g'] }).g, w: null, d: 0 }]
+  const [active, setActive] = useState(rounds.length - 1)
+  const round = rounds[Math.min(active, rounds.length - 1)]!
+  const log = round.g.map((e) => ({
     seat: e.s,
     ids: e.c,
     combo: e.t === null ? null : { type: e.t, rank: e.r },
   }))
+  // 队名用两个座位的名字（0/2 一队、1/3 一队），看的人不用猜「我方」是谁
+  const teamLabel = (w: 'even' | 'odd') =>
+    w === 'even' ? `${data.n[0]}&${data.n[2]}` : `${data.n[1]}&${data.n[3]}`
   const counts = new Map<number, number>()
   for (const e of log) {
     if (!e.combo) continue
@@ -41,9 +51,28 @@ export function ReplayView({ data }: { data: ReplayData }) {
         </span>
       </div>
 
-      {breakdown && <p className="mt-1 text-[13px] text-faint">{breakdown}</p>}
+      {rounds.length > 1 && (
+        <div className="mt-3 flex flex-wrap gap-1.5" data-testid="replay-rounds">
+          {rounds.map((r, i) => (
+            <button
+              key={i}
+              onClick={() => setActive(i)}
+              className={[
+                'rounded-control border px-3 py-1 text-[13px]',
+                i === active ? 'border-accent bg-accent/10 text-ink' : 'border-control bg-surface text-muted',
+              ].join(' ')}
+              aria-pressed={i === active}
+            >
+              第 {i + 1} 局
+              {r.w ? ` · ${teamLabel(r.w)} +${r.d}` : ' · 进行中'}
+            </button>
+          ))}
+        </div>
+      )}
 
-      <div className="panel mt-4 flex min-h-0 flex-1 flex-col p-4">
+      {breakdown && <p className="mt-2 text-[13px] text-faint">{breakdown}</p>}
+
+      <div className="panel mt-3 flex min-h-0 flex-1 flex-col p-4">
         <PlayList log={log} names={data.n} emptyText="这一局没有记录" />
       </div>
 
