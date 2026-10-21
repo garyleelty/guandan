@@ -49,10 +49,12 @@ for (let i = 0; i < 6; i++) {
 await sleep(1200)
 const after = await watcher.eval('window.__gdStore.getState().match.log.length')
 
+const watchers = await host.eval('JSON.stringify(window.__gdStore.getState().roomWatchers ?? [])')
 console.log(
   JSON.stringify(
     {
       code,
+      watchers: JSON.parse(watchers),
       watch: JSON.parse(watchInfo),
       logBefore: before,
       logAfter: after,
@@ -68,6 +70,39 @@ console.log(
   ),
 )
 await watcher.screenshot({ path: 'docs/screenshots/14-spectator.png', format: 'png' })
+
+// 客人断线后的提示与「重新连接」按钮（另开一个房间，这边要留个空位）
+const host2 = await b.newPage({ width: 1440, height: 900 })
+await host2.goto('http://localhost:5173/')
+await sleep(700)
+await host2.eval('document.querySelector("[data-testid=create-room]").click()')
+await sleep(4000)
+const code2 = await host2.eval('window.__gdStore.getState().roomCode')
+const guest = await b.newPage({ width: 1440, height: 900 })
+await guest.goto(`http://localhost:5173/?r=${code2}`)
+await sleep(6000)
+await guest.eval('window.__gdStore.setState({ guestLost: true })')
+await sleep(400)
+const lostUi = await guest.eval(`(() => {
+  const txt = document.body.innerText
+  return JSON.stringify({
+    hasReconnect: !!document.querySelector('[data-testid=reconnect]'),
+    mentionsAi: txt.includes('AI 接手'),
+    text: txt.slice(0, 120),
+  })
+})()`)
+console.log('guest lost UI:', lostUi)
+// 点「重新连接」应该能回到牌桌
+await guest.eval('document.querySelector("[data-testid=reconnect]").click()')
+await sleep(6000)
+const reconnected = await guest.eval(`JSON.stringify({
+  screen: window.__gdStore.getState().screen,
+  lost: window.__gdStore.getState().guestLost,
+  seat: window.__gdStore.getState().mySeat,
+})`)
+console.log('after reconnect:', reconnected, 'guestErrors:', guest.consoleErrors)
+console.log('reconnect ok:', JSON.parse(reconnected).lost === false && JSON.parse(reconnected).seat >= 0)
+await guest.close()
 
 // 手机上观战也要放得下
 const m = await b.newPage({ width: 390, height: 844, mobile: true })

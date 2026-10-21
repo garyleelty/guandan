@@ -85,6 +85,7 @@ function hostHandle(conn: DataConnection, msg: Msg): void {
     const watchName = (msg.name || '观众').slice(0, 8)
     r.spectators = r.spectators.filter((sp) => sp.connId !== conn.peer)
     r.spectators.push({ connId: conn.peer, name: watchName })
+    useStore.setState({ roomWatchers: r.spectators.map((sp) => sp.name) })
     conn.send({
       t: 'welcome',
       seat: -1,
@@ -138,6 +139,7 @@ function hostDrop(conn: DataConnection): void {
   if (!r) return
   if (r.spectators.some((sp) => sp.connId === conn.peer)) {
     r.spectators = r.spectators.filter((sp) => sp.connId !== conn.peer)
+    useStore.setState({ roomWatchers: r.spectators.map((sp) => sp.name) })
     return
   }
   const seat = r.seats.find((s) => s.connId === conn.peer)

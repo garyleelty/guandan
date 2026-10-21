@@ -26,6 +26,8 @@ interface Store {
   mySeat: Seat
   roomCode: string | null
   roomSeats: RoomSeatLite[] | null
+  /** 观战的人（房主侧可见） */
+  roomWatchers: string[]
   joining: boolean
   guestLost: boolean
   /** 断线重连后回到牌桌：给玩家一句提示 */
@@ -53,6 +55,7 @@ export const useStore = create<Store>((set, get) => ({
   mySeat: 0,
   roomCode: null,
   roomSeats: null,
+  roomWatchers: [],
   joining: false,
   guestLost: false,
   reconnected: false,
@@ -96,6 +99,7 @@ export const useStore = create<Store>((set, get) => ({
       match: null,
       roomCode: null,
       roomSeats: null,
+  roomWatchers: [],
       joining: false,
       guestLost: false,
       intentSink: null,

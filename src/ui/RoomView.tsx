@@ -24,15 +24,28 @@ export function RoomView() {
         <div className="grid h-full place-items-center px-4">
           <div className="panel w-full max-w-[480px] p-6">
             <h2 className="text-base font-semibold text-ink">{kicked || '连接断开'}</h2>
-            <button
-              className="btn btn-secondary mt-4 w-full"
-              onClick={() => useStore.getState().backToLobby()}
-            >
-              返回大厅
-            </button>
-            <p className="mt-3 text-xs text-muted">
-              {kicked ? '你可以回大厅重新开一局，或等房主再拉你。' : '与房主的连接已断开，牌局由 AI 继续。'}
+            <p className="mt-2 text-sm text-muted">
+              {kicked
+                ? '你可以回大厅重新开一局，或等房主再拉你。'
+                : '和房主的连接断了。房主还在的话，你的座位会暂时由 AI 接手；重新连上就还给你。'}
             </p>
+            <div className="mt-4 flex gap-2">
+              {!kicked && code && (
+                <button
+                  className="btn btn-primary flex-1"
+                  onClick={() => joinRoom(code)}
+                  data-testid="reconnect"
+                >
+                  重新连接
+                </button>
+              )}
+              <button
+                className="btn btn-secondary flex-1"
+                onClick={() => useStore.getState().backToLobby()}
+              >
+                返回大厅
+              </button>
+            </div>
           </div>
         </div>
       )
@@ -162,6 +175,7 @@ function HostSide({ code, seats }: { code: string | null; seats: RoomSeats }) {
   const link = code ? shareLink(code) : ''
   const seatList = seats ?? []
   const aiLevel = useStore((s) => s.aiLevel)
+  const watchers = useStore((s) => s.roomWatchers)
   const watchLink = code ? `${shareLink(code)}&watch=1` : ''
   return (
     <div className="mx-auto w-full max-w-[480px] px-4 py-8">
@@ -206,7 +220,10 @@ function HostSide({ code, seats }: { code: string | null; seats: RoomSeats }) {
             复制观战链接
           </button>
         </div>
-        <p className="mt-1.5 text-[12px] text-faint">发给朋友，他们可以只看牌不上桌</p>
+        <p className="mt-1.5 text-[12px] text-faint">
+          发给朋友，他们可以只看牌不上桌
+          {watchers.length > 0 ? ` · 当前 ${watchers.length} 人在观战` : ''}
+        </p>
 
         <div className="mt-4 flex items-center gap-2">
           <span className="text-sm text-muted">AI 难度</span>

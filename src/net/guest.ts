@@ -38,6 +38,9 @@ export function joinRoom(codeOrUrl?: string, opts?: { watch?: boolean }): 'bad-c
     joining: true,
     roomSeats: null,
     spectating: opts?.watch === true,
+    // 重新连接：把「断开 / 被请出」的状态清掉，不然界面还停在断线页
+    guestLost: false,
+    kicked: '',
   })
   peer.on('open', () => {
     const conn = peer.connect(peerIdOf(code), { reliable: true })
