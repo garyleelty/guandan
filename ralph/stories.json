@@ -364,6 +364,33 @@
         }
       ],
       "status": "done"
+    },
+    {
+      "id": "S15",
+      "title": "牌谱（这一局每手出的真实牌面）",
+      "criteria": [
+        {
+          "id": "S15-1",
+          "desc": "牌谱面板：每手牌列出序号、座位、牌型与真实牌面；过牌也记一笔",
+          "check": "cmd"
+        },
+        {
+          "id": "S15-2",
+          "desc": "cardFromId：从牌 id 还原整张牌（牌谱要还原当时打的是哪几张）",
+          "check": "cmd"
+        },
+        {
+          "id": "S15-3",
+          "desc": "手机端可用：面板全屏、牌面自动换行、不横向溢出",
+          "check": "cmd"
+        },
+        {
+          "id": "S15-4",
+          "desc": "验收：120 tests + inspect 0 FAIL 0 WARN + lint 0 FAIL",
+          "check": "cmd"
+        }
+      ],
+      "status": "done"
     }
   ]
 }

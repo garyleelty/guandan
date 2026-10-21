@@ -102,6 +102,14 @@ export function levelLabel(level: number): string {
   return RANK_LABEL[level] ?? String(level)
 }
 
+/** 从牌 id 反解整张牌（"s14-0" → 黑桃 A）。牌谱要还原当时打的是哪几张。 */
+export function cardFromId(id: string): Card {
+  if (id.startsWith('sj-')) return { id, rank: RANK.SJ, suit: -1 }
+  if (id.startsWith('bj-')) return { id, rank: RANK.BJ, suit: -1 }
+  const suit = SUIT_ABBR.indexOf(id[0] ?? 'x')
+  return { id, rank: Number(id.slice(1, id.lastIndexOf('-'))), suit: suit < 0 ? 0 : suit }
+}
+
 /** 从牌 id 反解点数（"s14-0" → 14，"sj-0" → 16，"bj-0" → 17）。 */
 export function cardIdToRank(id: string): number {
   if (id.startsWith('sj-')) return RANK.SJ

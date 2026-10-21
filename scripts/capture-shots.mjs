@@ -61,6 +61,13 @@ await p.eval(`(() => {
 await sleep(500)
 await shot('04-bomb-fx')
 
+// 4.5) 牌谱：这一局每一手出的真实牌面
+await p.eval('document.querySelector("[data-testid=play-log]").click()')
+await sleep(500)
+await shot('08-play-history')
+await p.eval('document.querySelector("[data-testid=play-history-close]").click()')
+await sleep(300)
+
 // 5) 结算：把这一局打完
 const playRound = async (maxSteps = 900) => {
   for (let i = 0; i < maxSteps; i++) {

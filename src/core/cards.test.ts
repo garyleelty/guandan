@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { RANK, buildDeck, cardIdToRank, deal, levelLabel, levelToRank, newShuffledDeck, sortBySuitGroups, sortCards } from './cards'
+import { RANK, buildDeck, cardIdToRank, deal, levelLabel, levelToRank, newShuffledDeck, sortBySuitGroups, sortCards, cardFromId,
+} from './cards'
 import type { Card } from './cards'
 
 describe('buildDeck', () => {
@@ -176,6 +177,20 @@ describe('deal', () => {
       for (let i = 1; i < h.length; i++) {
         expect(h[i - 1].rank).toBeGreaterThanOrEqual(h[i].rank)
       }
+    }
+  })
+})
+
+describe('cardFromId（牌 id 还原整张牌）', () => {
+  it('普通牌、王都能从 id 还原', () => {
+    expect(cardFromId('s14-0')).toEqual({ id: 's14-0', rank: 14, suit: 0 })
+    expect(cardFromId('h9-1')).toEqual({ id: 'h9-1', rank: 9, suit: 1 })
+    expect(cardFromId('sj-0')).toEqual({ id: 'sj-0', rank: RANK.SJ, suit: -1 })
+    expect(cardFromId('bj-1')).toEqual({ id: 'bj-1', rank: RANK.BJ, suit: -1 })
+  })
+  it('和 cardIdToRank 一致', () => {
+    for (const id of ['s3-0', 'd10-1', 'c13-0', 'h2-1']) {
+      expect(cardFromId(id).rank).toBe(cardIdToRank(id))
     }
   })
 })

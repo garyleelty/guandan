@@ -11,6 +11,7 @@ import { teamOf } from '../core/engine'
 import { aiMove } from '../core/ai'
 import { isMuted, playSound, toggleMute } from './sound'
 import { TributePanel } from './TributePanel'
+import { PlayHistory } from './PlayHistory'
 import { canAntiTribute } from '../core/engine'
 
 const COMBO_LABEL: Record<number, string> = {
@@ -148,6 +149,7 @@ export function Table() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [handMode, setHandMode] = useState<'rank' | 'suit'>('rank')
   const [handView, setHandView] = useState<'row' | 'grid'>('row')
+  const [showHistory, setShowHistory] = useState(false)
   const [hint, setHint] = useState<string | null>(null)
   const [fx, setFx] = useState<0 | 7 | 9>(0)
   const [mute, setMute] = useState(isMuted())
@@ -274,7 +276,7 @@ export function Table() {
     : null
 
   return (
-    <div className="flex h-full flex-col bg-ground">
+    <div className="flex h-full flex-col overflow-x-hidden bg-ground">
       {/* 顶栏：产品标记 · 级牌进度 · 范围 */}
       <header className="flex h-12 shrink-0 items-center gap-2.5 border-b border-line px-4">
         <Mark />
@@ -358,6 +360,10 @@ export function Table() {
             {st.phase === 'ended' && (
               <EndOverlay onRematch={useStore.getState().rematch} onLobby={useStore.getState().backToLobby} />
             )}
+
+            {showHistory && (
+              <PlayHistory st={st} onClose={() => setShowHistory(false)} />
+            )}
           </div>
       </main>
 
@@ -390,6 +396,14 @@ export function Table() {
               data-testid="hand-view"
             >
               {handView === 'row' ? '摊牌' : '收牌'}
+            </button>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => setShowHistory(true)}
+              title="这一局每一手出的真实牌面"
+              data-testid="play-log"
+            >
+              牌谱
             </button>
             <button
               className="btn btn-ghost btn-sm"
