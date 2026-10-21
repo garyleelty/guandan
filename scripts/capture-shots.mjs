@@ -56,11 +56,20 @@ await sleep(500)
 await shot('04-bomb-fx')
 
 // 5) 结算：把这一局打完
-for (let i = 0; i < 600; i++) {
-  const r = await step()
-  if (r === 'ended') break
-  await sleep(25)
+const playRound = async (maxSteps = 900) => {
+  for (let i = 0; i < maxSteps; i++) {
+    const r = await step()
+    if (r === 'ended') break
+    await sleep(25)
+  }
 }
+await playRound()
+await sleep(700)
+
+// 6) 再来一局 → 再打一局，结算里能看到本场战绩（跨局延续）
+await p.eval('document.querySelector("[data-testid=rematch]").click()')
+await sleep(900)
+await playRound()
 await sleep(900)
 await shot('05-settlement')
 
@@ -69,6 +78,7 @@ console.log(
     {
       phase: await p.eval('window.__gdStore.getState().match.phase'),
       log: await p.eval('window.__gdStore.getState().match.log.length'),
+      history: await p.eval('JSON.stringify(window.__gdStore.getState().match.history)'),
       errors: p.consoleErrors,
     },
     null,

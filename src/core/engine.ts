@@ -25,6 +25,9 @@ export interface TrickState {
 
 export type LogEntry = { seat: Seat; ids: string[]; combo: { type: number; rank: number; count?: number } | null }
 
+/** 一局的结果：谁赢、升了几级、打完后的级数。 */
+export type RoundResult = { winner: Team; delta: number; levels: Record<Team, number> }
+
 export interface GameState {
   phase: 'playing' | 'ended'
   levels: Record<Team, number>
@@ -34,6 +37,8 @@ export interface GameState {
   trick: TrickState
   finishCount: number
   log: LogEntry[]
+  /** 本场已打完的各局结果（跨局延续） */
+  history: RoundResult[]
 }
 
 export type Action = { kind: 'pass'; seat: Seat } | { kind: 'play'; seat: Seat; cards?: string[] }
@@ -45,6 +50,7 @@ export function newGame(opts?: {
   names?: string[]
   isBot?: boolean[]
   firstLeader?: Seat
+  history?: RoundResult[]
 }): GameState {
   const hands = opts?.hands ?? deal(newShuffledDeck({ seed: opts?.seed }))
   const players = [0, 1, 2, 3].map((i): Player => ({
@@ -64,6 +70,7 @@ export function newGame(opts?: {
     trick: { leader: turn, table: null, pending: [], lastPlay: null },
     finishCount: 0,
     log: [],
+    history: opts?.history ? [...opts.history] : [],
   }
 }
 
@@ -153,11 +160,18 @@ function maybeEnd(st: GameState): void {
     ...st.players.filter((p) => teamOf(p.seat) === winnerTeam && p.finishOrder !== 0).map((p) => p.finishOrder!),
   )
   const delta = partnerRank === 1 ? 3 : partnerRank === 2 ? 2 : 1
-  if (st.levels[winnerTeam] === 14) {
+  const atA = st.levels[winnerTeam] === 14
+  if (atA) {
     if (delta === 3) st.matchWinner = winnerTeam
   } else {
     st.levels[winnerTeam] = Math.min(14, st.levels[winnerTeam] + delta)
   }
+  // 本场战绩：升了几级（A 级非双下则原地不动，记 0）
+  st.history.push({
+    winner: winnerTeam,
+    delta: atA ? (delta === 3 ? 3 : 0) : delta,
+    levels: { even: st.levels.even, odd: st.levels.odd },
+  })
   st.phase = 'ended'
 }
 

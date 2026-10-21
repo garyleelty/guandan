@@ -42,6 +42,7 @@ export interface SerializedState {
   }
   finishCount: number
   log: GameState['log']
+  history: GameState['history']
 }
 
 const filler = (n: number): { id: string; rank: number; suit: number }[] =>
@@ -63,5 +64,6 @@ export function serializeFor(st: GameState, seat: Seat): SerializedState {
     trick: st.trick as unknown as SerializedState['trick'],
     finishCount: st.finishCount,
     log: st.log,
+    history: st.history,
   }
 }

@@ -157,6 +157,59 @@ describe('头游与接风', () => {
   })
 })
 
+describe('本场战绩（history）', () => {
+  it('一局结束时记下胜方与升的级数', () => {
+    const { s } = drive(
+      { A: ['3'], B: ['4', '6', '9'], C: ['5'], D: ['7', '2'] },
+      [
+        [0, 'play', '3'],
+        [1, 'pass'],
+        [2, 'pass'],
+        [3, 'pass'],
+        [1, 'play', '4'],
+        [2, 'play', '5'],
+      ],
+    )
+    expect(s.phase).toBe('ended')
+    expect(s.history).toHaveLength(1)
+    expect(s.history[0]).toMatchObject({ winner: 'even', delta: 3 })
+    expect(s.history[0]!.levels).toMatchObject({ even: 5, odd: 2 })
+  })
+
+  it('新一局可接着上一场的战绩往下记', () => {
+    const prev = newGame({
+      levels: { even: 5, odd: 2 },
+      history: [{ winner: 'even', delta: 3, levels: { even: 5, odd: 2 } }],
+    })
+    expect(prev.history).toHaveLength(1)
+    expect(prev.history[0]!.winner).toBe('even')
+  })
+
+  it('A 级非双下：留在 A，本局不计升级', () => {
+    const { s } = drive(
+      { A: ['3'], B: ['6'], C: ['8', '5'], D: ['4'] },
+      [
+        [0, 'play', '3'],
+        [1, 'pass'],
+        [2, 'pass'],
+        [3, 'pass'],
+        [1, 'play', '6'],
+        [2, 'pass'],
+        [3, 'pass'],
+        [2, 'play', '8'],
+        [3, 'pass'],
+        [2, 'play', '5'],
+      ],
+      { levels: { even: 14, odd: 2 } },
+    )
+    expect(s.phase).toBe('ended')
+    expect(s.matchWinner).toBeNull()
+    expect(s.levels).toMatchObject({ even: 14, odd: 2 })
+    expect(s.history).toHaveLength(1)
+    expect(s.history[0]).toMatchObject({ winner: 'even', delta: 0 })
+  })
+})
+
 describe('升级计分', () => {
   it('双下 1+2 同队 → 立即结束 +3', () => {
     const { s } = drive(

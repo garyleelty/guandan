@@ -144,6 +144,7 @@ export function Table() {
   const roomCode = useStore((s) => s.roomCode)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [handMode, setHandMode] = useState<'rank' | 'suit'>('rank')
+  const [handView, setHandView] = useState<'row' | 'grid'>('row')
   const [hint, setHint] = useState<string | null>(null)
   const [fx, setFx] = useState<0 | 7 | 9>(0)
   const [mute, setMute] = useState(isMuted())
@@ -212,6 +213,16 @@ export function Table() {
   useEffect(() => {
     setHint(null)
   }, [st.log.length, st.turn])
+
+  /** 为什么不能出：牌型不合法 / 压不过桌面（说清楚，禁用的按钮不该让人猜）。 */
+  const blockReason = (() => {
+    if (selCards.length === 0) return null
+    if (!selCombo) return '这手不是合法牌型'
+    if (table && !beats(selCombo, table.combo)) {
+      return `压不过桌面的${COMBO_LABEL[table.combo.type] ?? ''} ${RANK_LABEL[table.combo.rank] ?? ''}`.trim()
+    }
+    return null
+  })()
 
   const lastLog = st.log[st.log.length - 1]
   useEffect(() => {
@@ -291,7 +302,7 @@ export function Table() {
               <div className="flex flex-wrap items-end justify-center gap-1.5">
                 {centerCards.map((c) => (
                   <div key={c.id} className="animate-pop">
-                    <CardFace card={c} small />
+                    <CardFace card={c} size="xs" />
                   </div>
                 ))}
               </div>
@@ -331,8 +342,21 @@ export function Table() {
             <span className="chip bg-accent/15 text-accent">{table ? '轮到你' : '轮到你领出'}</span>
           )}
           {hint ? <span className="text-[13px] text-accent">{hint}</span> : null}
+          {!hint && blockReason ? (
+            <span className="text-[13px] text-muted" data-testid="block-reason">
+              {blockReason}
+            </span>
+          ) : null}
 
           <div className="ml-auto flex items-center gap-2">
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => setHandView((v) => (v === 'row' ? 'grid' : 'row'))}
+              title={handView === 'row' ? '摊开手牌，看清每一张' : '收回手牌'}
+              data-testid="hand-view"
+            >
+              {handView === 'row' ? '摊牌' : '收牌'}
+            </button>
             <button
               className="btn btn-ghost btn-sm"
               onClick={askHint}
@@ -369,6 +393,7 @@ export function Table() {
           toggle={toggle}
           quickLead={quickLead}
           levelCardRank={levelCardRank}
+          view={handView}
           dimmed={(c) => {
             if (!myTurn || !table) return false
             const c1 = identify([...selCards, c])
@@ -391,10 +416,36 @@ function EndOverlay({ onRematch, onLobby }: { onRematch: () => void; onLobby: ()
   const sorted = [...st.players].sort((a, b) => a.finishOrder! - b.finishOrder!)
   const mine = teamOf(mySeat) === 'even' ? st.levels.even : st.levels.odd
   const theirs = teamOf(mySeat) === 'even' ? st.levels.odd : st.levels.even
+  const myTeam = teamOf(mySeat)
+  const myWins = st.history.filter((r) => r.winner === myTeam).length
   return (
     <div className="absolute inset-0 z-20 grid place-items-center bg-ground/85 px-4">
       <div className="panel w-[380px] max-w-full p-6">
         <h2 className={`text-xl font-semibold ${isMatch ? 'text-accent' : 'text-ink'}`}>{title}</h2>
+        {st.history.length > 0 && (
+          <div className="mt-4">
+            <div className="flex items-baseline justify-between">
+              <span className="text-[13px] text-muted">本场战绩</span>
+              <span className="text-[13px] text-muted">
+                {st.history.length} 局 · 我方 {myWins} 胜
+              </span>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {st.history.map((r, i) => {
+                const mineRound = r.winner === myTeam
+                return (
+                  <span
+                    key={i}
+                    className={`chip num ${mineRound ? 'bg-accent/15 text-accent' : ''}`}
+                    title={`第 ${i + 1} 局`}
+                  >
+                    {mineRound ? '我方' : '对家'} {r.delta > 0 ? `+${r.delta}` : '±0'}
+                  </span>
+                )
+              })}
+            </div>
+          </div>
+        )}
         <div className="mt-4">
           {sorted.map((p, i) => (
             <div

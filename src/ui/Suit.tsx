@@ -6,11 +6,19 @@ const PATHS: Record<number, string> = {
 }
 
 /** 花色用矢量画，不用字体里的符号——不同系统渲染不一致，也会被当成表情。 */
-export function Suit({ suit, className }: { suit: number; className?: string }) {
+export function Suit({
+  suit,
+  className,
+  style,
+}: {
+  suit: number
+  className?: string
+  style?: React.CSSProperties
+}) {
   const d = PATHS[suit]
   if (!d) return null
   return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden="true" fill="currentColor">
+    <svg viewBox="0 0 24 24" className={className} style={style} aria-hidden="true" fill="currentColor">
       <path d={d} />
     </svg>
   )

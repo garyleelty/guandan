@@ -118,13 +118,14 @@ export function hostStart(): void {
   const r = room
   if (!r) return
   // 级数接着上一局打；下一局由上一局头游领出（整场结束后从 2 级重来）
-  const { levels, firstLeader } = nextRoundOptions(r.match)
+  const { levels, firstLeader, history } = nextRoundOptions(r.match)
   r.match = newGame({
     seed: Math.floor(Math.random() * 1e9),
     names: r.seats.map((s) => (s.kind === 'empty' ? '-' : s.name)),
     isBot: r.seats.map((s) => s.kind !== 'host' && s.kind !== 'guest'),
     firstLeader,
     levels,
+    history,
   })
   useStore.setState({
     screen: 'table',
