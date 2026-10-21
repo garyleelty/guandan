@@ -12,6 +12,21 @@ export interface RoomSeatLite {
   kind: SeatKind
 }
 
+/**
+ * 下一局的起始条件：级数接着上一局打，下一局由上一局的头游领出；
+ * 若上一局已打过 A（整场结束），则从 2 级重新开始一场。
+ */
+export function nextRoundOptions(prev: GameState | null): {
+  levels?: { even: number; odd: number }
+  firstLeader: Seat
+} {
+  if (!prev || prev.matchWinner !== null) return { firstLeader: 0 }
+  return {
+    levels: { even: prev.levels.even, odd: prev.levels.odd },
+    firstLeader: prev.players.find((p) => p.finishOrder === 0)?.seat ?? 0,
+  }
+}
+
 interface Store {
   screen: Screen
   mode: Mode
@@ -24,6 +39,7 @@ interface Store {
   intentSink: ((a: Action) => void) | null
   afterDispatch: (() => void) | null
   teardown: (() => void) | null
+  rematchSink: (() => void) | null
   startSolo: () => void
   dispatch: (a: Action) => void
   rematch: () => void
@@ -43,13 +59,22 @@ export const useStore = create<Store>((set, get) => ({
   intentSink: null,
   afterDispatch: null,
   teardown: null,
-  startSolo: () =>
+  rematchSink: null,
+  startSolo: () => {
+    const { levels, firstLeader } = nextRoundOptions(get().match)
     set({
       screen: 'table',
       mode: 'solo',
       mySeat: 0,
-      match: newGame({ seed: Math.floor(Math.random() * 1e9), names: ['你', 'AI 甲', 'AI 乙', 'AI 丙'], isBot: [false, true, true, true] }),
-    }),
+      match: newGame({
+        seed: Math.floor(Math.random() * 1e9),
+        names: ['你', 'AI 甲', 'AI 乙', 'AI 丙'],
+        isBot: [false, true, true, true],
+        levels,
+        firstLeader,
+      }),
+    })
+  },
   dispatch: (a) => {
     const { mode, match } = get()
     if (!match) return
@@ -65,6 +90,7 @@ export const useStore = create<Store>((set, get) => ({
   rematch: () => {
     const { mode } = get()
     if (mode === 'solo') get().startSolo()
+    else get().rematchSink?.()
   },
   backToLobby: () => {
     get().teardown?.()
@@ -78,6 +104,7 @@ export const useStore = create<Store>((set, get) => ({
       intentSink: null,
       afterDispatch: null,
       teardown: null,
+      rematchSink: null,
       mode: 'solo',
       mySeat: 0,
     })
@@ -87,4 +114,6 @@ export const useStore = create<Store>((set, get) => ({
 
 export const dispatchAt = (a: Action): void => useStore.getState().dispatch(a)
 
-;(window as unknown as Record<string, unknown>).__gdStore = useStore
+if (typeof window !== 'undefined') {
+  ;(window as unknown as Record<string, unknown>).__gdStore = useStore
+}

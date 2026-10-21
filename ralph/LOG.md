@@ -48,4 +48,13 @@
 - P2P 回归：双标签页实测建房→链接进房→AI 补位→开局→双方出牌同步（scripts/smoke-p2p.mjs）。
 - 72 tests 全绿；真浏览器冒烟 scripts/smoke-ui.mjs 覆盖 理牌/出牌/AI 接牌/提示。
 
+## S9 升级延续 + 下一局 done
+- 修 bug：「再来一局」把级数打回 2 级——掼蛋的升级整场连打，级数必须延续。
+  新增纯函数 nextRoundOptions(prev)：级数接着上一局、下一局由上一局头游领出；整场结束（打过 A）才从 2 级重来。
+  单机 rematch 与 P2P hostStart 都改用它（src/state/store.ts、src/net/host.ts），带 4 条单测。
+- 修 bug：P2P 里房主的「再来一局」是死的（rematch 只处理 solo）——新增 rematchSink，房主开下一局会广播给客人；
+  客人端结算页改为「等待房主开下一局」，不再有无效按钮。
+- 真浏览器验证：打完一局后 levels {even:4,odd:2} → 再来一局仍为 {even:4,odd:2}，新一局由头游（座位 2）领出。
+- 76 tests 全绿；P2P 双标签页回归仍同步。
+
 

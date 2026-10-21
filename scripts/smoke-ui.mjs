@@ -52,6 +52,26 @@ if (myTurn) {
   )
 }
 
+// 4) 打完一局 → 「再来一局」：级数应延续到下一局
+for (let i = 0; i < 800; i++) {
+  const ended = await p.eval(`(() => {
+    const s = window.__gdStore.getState()
+    const st = s.match
+    if (!st || st.phase !== 'playing') return true
+    s.dispatch(window.__gdAi(st, st.turn))
+    return false
+  })()`)
+  if (ended) break
+  await sleep(15)
+}
+const levelsBefore = await p.eval('JSON.stringify(window.__gdStore.getState().match.levels)')
+const phaseEnded = await p.eval('window.__gdStore.getState().match.phase')
+await p.eval('document.querySelector("[data-testid=rematch]").click()')
+await sleep(900)
+const levelsAfter = await p.eval('JSON.stringify(window.__gdStore.getState().match.levels)')
+const phaseAfter = await p.eval('window.__gdStore.getState().match.phase')
+const leaderAfter = await p.eval('window.__gdStore.getState().match.trick.leader')
+
 console.log(
   JSON.stringify(
     {
@@ -64,6 +84,12 @@ console.log(
       hintSelected,
       hintCanPlay,
       hintText,
+      phaseEnded,
+      levelsBefore,
+      levelsAfter,
+      levelsCarried: levelsBefore === levelsAfter,
+      phaseAfter,
+      leaderAfter,
       consoleErrors: p.consoleErrors,
     },
     null,

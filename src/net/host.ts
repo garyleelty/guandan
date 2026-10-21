@@ -4,7 +4,7 @@ import { newGame, step } from '../core/engine'
 import type { Action, GameState, Seat } from '../core/engine'
 import { peerIdOf, makeRoomCode, serializeFor } from './room'
 import type { Msg } from './room'
-import { useStore } from '../state/store'
+import { useStore, nextRoundOptions } from '../state/store'
 
 export interface RoomSeat {
   seat: Seat
@@ -117,13 +117,24 @@ export function hostRemoveAi(seat: Seat): void {
 export function hostStart(): void {
   const r = room
   if (!r) return
+  // 级数接着上一局打；下一局由上一局头游领出（整场结束后从 2 级重来）
+  const { levels, firstLeader } = nextRoundOptions(r.match)
   r.match = newGame({
     seed: Math.floor(Math.random() * 1e9),
     names: r.seats.map((s) => (s.kind === 'empty' ? '-' : s.name)),
     isBot: r.seats.map((s) => s.kind !== 'host' && s.kind !== 'guest'),
-    firstLeader: 0,
+    firstLeader,
+    levels,
   })
-  useStore.setState({ screen: 'table', mySeat: 0, match: r.match, mode: 'host', afterDispatch: broadcastState, teardown: destroyRoom })
+  useStore.setState({
+    screen: 'table',
+    mySeat: 0,
+    match: r.match,
+    mode: 'host',
+    afterDispatch: broadcastState,
+    teardown: destroyRoom,
+    rematchSink: hostStart,
+  })
   broadcastState()
 }
 

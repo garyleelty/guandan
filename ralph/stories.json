@@ -187,6 +187,28 @@
         }
       ],
       "status": "done"
+    },
+    {
+      "id": "S9",
+      "title": "升级延续 + 下一局可开",
+      "criteria": [
+        {
+          "id": "S9-1",
+          "desc": "nextRoundOptions：级数延续、头游领出、整场结束才归零（4 条单测）",
+          "check": "cmd"
+        },
+        {
+          "id": "S9-2",
+          "desc": "单机「再来一局」级数不重置；真浏览器验证 {even:4,odd:2} 保持不变",
+          "check": "cmd"
+        },
+        {
+          "id": "S9-3",
+          "desc": "P2P：房主可开下一局并广播；客人端显示「等待房主开下一局」",
+          "check": "cmd"
+        }
+      ],
+      "status": "done"
     }
   ]
 }

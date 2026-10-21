@@ -384,6 +384,7 @@ export function Table() {
 function EndOverlay({ onRematch, onLobby }: { onRematch: () => void; onLobby: () => void }) {
   const st = useStore((s) => s.match)!
   const mySeat = useStore((s) => s.mySeat)
+  const mode = useStore((s) => s.mode)
   const winner = st.players.find((p) => p.finishOrder === 0)!
   const isMatch = st.matchWinner !== null
   const title = isMatch ? `${winner.name} 队拿下整场` : `${winner.name} 队升级`
@@ -410,9 +411,15 @@ function EndOverlay({ onRematch, onLobby }: { onRematch: () => void; onLobby: ()
           <LevelLadder mine={mine} theirs={theirs} withLabels />
         </div>
         <div className="mt-5 flex gap-2">
-          <button className="btn btn-primary flex-1" onClick={onRematch}>
-            再来一局
-          </button>
+          {mode === 'guest' ? (
+            <span className="flex h-9 flex-1 items-center justify-center rounded-control border border-line text-[13px] text-muted">
+              等待房主开下一局
+            </span>
+          ) : (
+            <button className="btn btn-primary flex-1" onClick={onRematch} data-testid="rematch">
+              再来一局
+            </button>
+          )}
           <button className="btn btn-secondary flex-1" onClick={onLobby}>
             返回大厅
           </button>
