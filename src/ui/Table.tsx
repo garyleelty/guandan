@@ -112,7 +112,7 @@ function UnseenCards({ st, myHand }: { st: GameState; myHand: GameState['players
       rows.push({ rank, n: Math.max(0, total - n - (mine.get(rank) ?? 0)) })
     }
     let unknown = 0
-    for (const rank of [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 18, 16, 17]) {
+    for (const rank of [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17]) {
       if (!played.has(rank)) unknown += 1
     }
     rows.sort((a, b) => b.rank - a.rank)
@@ -155,7 +155,7 @@ export function Table() {
   const next = st.players[(mySeat + 1) % 4]!
   const partner = st.players[(mySeat + 2) % 4]!
   const prev = st.players[(mySeat + 3) % 4]!
-  const levelRank = Math.max(st.levels.even, st.levels.odd)
+  const levelRank = st.handLevel
   const levelCardRank = levelToRank(levelRank)
   const myLevel = teamOf(mySeat) === 'even' ? st.levels.even : st.levels.odd
   const theirLevel = teamOf(mySeat) === 'even' ? st.levels.odd : st.levels.even
@@ -166,11 +166,11 @@ export function Table() {
   const table = st.trick.table
 
   const sortedHand = useMemo(
-    () => (handMode === 'suit' ? sortBySuitGroups(me.hand) : me.hand),
-    [me.hand, handMode],
+    () => (handMode === 'suit' ? sortBySuitGroups(me.hand, st.handLevel) : me.hand),
+    [me.hand, handMode, st.handLevel],
   )
   const selCards = useMemo(() => me.hand.filter((c) => selected.has(c.id)), [me.hand, selected])
-  const selCombo = selCards.length >= 1 ? identify(selCards) : null
+  const selCombo = selCards.length >= 1 ? identify(selCards, st.handLevel) : null
   const canPlay = !!selCombo && (!table || beats(selCombo, table.combo))
   // 进贡：只能交一张；还牌：只能还一张不大于 10 的牌
   const canGive = tributeTurn && tribute?.step === 'give' && selCards.length === 1
@@ -228,7 +228,7 @@ export function Table() {
     }
     const ids = mv.cards ?? []
     const cards = me.hand.filter((c) => ids.includes(c.id))
-    const combo = identify(cards)
+    const combo = identify(cards, st.handLevel)
     setSelected(new Set(ids))
     setHint(combo ? `建议：${COMBO_LABEL[combo.type] ?? ''} ${RANK_LABEL[combo.rank] ?? ''}`.trim() : '建议出牌')
   }
@@ -450,7 +450,7 @@ export function Table() {
           dimmed={(c) => {
             if (isTribute) return false
             if (!myTurn || !table) return false
-            const c1 = identify([...selCards, c])
+            const c1 = identify([...selCards, c], st.handLevel)
             if (selected.has(c.id)) return false
             return !(c1 && beats(c1, table.combo))
           }}

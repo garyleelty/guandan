@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { sortCards } from './cards'
+import { RANK, sortCards } from './cards'
 import type { Card } from './cards'
-import { autoplay, newGame, step, teamOf } from './engine'
+import { autoplay, newGame, newTributeRound, step, teamOf } from './engine'
 import type { GameState, Seat } from './engine'
 import { mk } from './testutil'
 
@@ -332,5 +332,39 @@ describe('autoplay 终止性', () => {
       const partner = end.players.find((p) => teamOf(p.seat) === teamOf(winner.seat) && p.seat !== winner.seat)!
       expect(partner.finishOrder).not.toBeNull()
     }
+  })
+})
+
+describe('牌序：官方淮安口径', () => {
+  it('本局级数进状态：新局默认 2 级；给了级数就按两队里高的那档', () => {
+    expect(newGame().handLevel).toBe(2)
+    expect(newGame({ levels: { even: 7, odd: 4 } }).handLevel).toBe(7)
+  })
+
+  it('进贡局沿用上一局上游那队的级数（官方：本局级数 = 头游那队的级数）', () => {
+    const st = newGame({ levels: { even: 6, odd: 9 } })
+    // 造一局结束：0 头游、2 二游、1 三游、3 四游
+    st.phase = 'ended'
+    st.players[0]!.finishOrder = 0
+    st.players[2]!.finishOrder = 1
+    st.players[1]!.finishOrder = 2
+    st.players[3]!.finishOrder = 3
+    const t = newTributeRound(st)!
+    expect(t.handLevel).toBe(6) // 头游是 0（even 队），级数 6
+  })
+
+  it('级牌压 A，2 最小', () => {
+    const { st, fid } = scenario({ A: ['7', '2', '5'], B: ['3', '4', '6'], C: ['8'], D: ['9'] })
+    const s0 = newGame({ hands: st.players.map((p) => p.hand), levels: { even: 7, odd: 2 } })
+    void st
+    // 0 先出 7（级牌），1 跟不出更大的单张
+    const s1 = step(s0, { kind: 'play', seat: 0, cards: [fid('7')] })
+    expect(s1.trick.table?.combo.rank).toBe(RANK.LEVEL)
+    const s2 = step(s1, { kind: 'pass', seat: 1 })
+    const s3 = step(s2, { kind: 'pass', seat: 2 })
+    const s4 = step(s3, { kind: 'pass', seat: 3 })
+    // 桌面是级牌，2 压不过
+    const withTwo = step(s4, { kind: 'play', seat: 1, cards: [fid('2')] })
+    expect(withTwo).toBe(s4)
   })
 })

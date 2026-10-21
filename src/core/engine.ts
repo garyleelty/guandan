@@ -1,4 +1,4 @@
-import { RANK, deal, newShuffledDeck, sortCards } from './cards'
+import { RANK, deal, levelToRank, newShuffledDeck, sortCards } from './cards'
 import type { Card } from './cards'
 import { identify, beats } from './combos'
 import type { Combo } from './combos'
@@ -61,6 +61,8 @@ export type TributeState = {
 export interface GameState {
   phase: 'playing' | 'tribute' | 'ended'
   levels: Record<Team, number>
+  /** 本局级数（2..14，14=A）：级牌按它算，比较时大于 A */
+  handLevel: number
   matchWinner: Team | null
   players: Player[]
   turn: Seat
@@ -88,18 +90,20 @@ export function newGame(opts?: {
   firstLeader?: Seat
   history?: RoundResult[]
 }): GameState {
+  const handLevel = opts?.levels ? Math.max(opts.levels.even, opts.levels.odd) : 2
   const hands = opts?.hands ?? deal(newShuffledDeck({ seed: opts?.seed }))
   const players = [0, 1, 2, 3].map((i): Player => ({
     seat: i as Seat,
     name: opts?.names?.[i] ?? `玩家 ${i + 1}`,
     isBot: opts?.isBot?.[i] ?? true,
-    hand: sortCards(hands[i] ?? []),
+    hand: sortCards(hands[i] ?? [], handLevel),
     finishOrder: null,
   }))
   const turn = (opts?.firstLeader ?? 0) as Seat
   return {
     phase: 'playing',
     levels: opts?.levels ? { even: opts.levels.even, odd: opts.levels.odd } : { even: 2, odd: 2 },
+    handLevel,
     matchWinner: null,
     players,
     turn,
@@ -131,6 +135,8 @@ export function newTributeRound(prev: GameState, opts?: { seed?: number }): Game
   return {
     phase: 'tribute',
     levels: { ...prev.levels },
+    // 官方口径：本局级数 = 上一局头游（上游）那队的级数
+    handLevel: prev.levels[teamOf(head)],
     matchWinner: null,
     players: prev.players.map((p) => ({ ...p, hand: [...p.hand] })),
     turn: givers[0]!,
@@ -248,7 +254,7 @@ function doGive(state: GameState, action: Action & { kind: 'give' }): GameState 
   if (!isReturnable(card) && hand.some(isReturnable)) return state
   st.players[action.seat]!.hand = st.players[action.seat]!.hand.filter((c) => c.id !== card.id)
   const to = tt.returnTo[action.seat]!
-  st.players[to]!.hand = sortCards([...st.players[to]!.hand, card])
+  st.players[to]!.hand = sortCards([...st.players[to]!.hand, card], st.handLevel)
   tt.returned[action.seat] = card.id
   const next = tt.returnees.find((r) => !(r in tt.returned))
   if (next !== undefined) {
@@ -295,7 +301,7 @@ function startTributeReturns(st: GameState): GameState {
   for (const g of payers) {
     const card = tt.cards[g]!
     const recv = to[g]!
-    players[recv]!.hand = sortCards([...players[recv]!.hand, card])
+    players[recv]!.hand = sortCards([...players[recv]!.hand, card], st.handLevel)
   }
 
   const returnees = payers.map((g) => to[g]!)
@@ -357,7 +363,7 @@ function doPlay(state: GameState, action: Action & { kind: 'play' }): GameState 
   const me = state.players[action.seat]!
   const cards = me.hand.filter((c) => ids.includes(c.id))
   if (cards.length !== ids.length) return state
-  const combo = identify(cards)
+  const combo = identify(cards, state.handLevel)
   if (!combo) return state
   if (state.trick.table && !beats(combo, state.trick.table.combo)) return state
 
@@ -428,72 +434,92 @@ export function legalMoves(st: GameState, seat: Seat): Combo[] {
   }
   const ranks = [...byRank.keys()].sort((a, b) => a - b)
   const out: Card[][] = []
-
   const has = (r: number): boolean => byRank.has(r)
+  // 级牌在连对/钢板里不能按原点数用（官方：级牌不能按原点数出牌）
+  const levelRank = levelToRank(st.handLevel)
 
   // 单张 / 对子 / 三张
   for (const r of ranks) out.push(canonPick(byRank.get(r)!, 1))
   for (const r of ranks) {
-    if (byRank.get(r)!.length >= 2 && r < 16) out.push(canonPick(byRank.get(r)!, 2))
+    if (byRank.get(r)!.length >= 2) out.push(canonPick(byRank.get(r)!, 2))
   }
   for (const r of ranks) {
-    if (byRank.get(r)!.length >= 3) out.push(canonPick(byRank.get(r)!, 3))
+    if (byRank.get(r)!.length >= 3 && r < RANK.SJ) out.push(canonPick(byRank.get(r)!, 3))
   }
-  // 炸弹
+  // 炸弹（级牌也算一组，按级牌比较）
   for (const r of ranks) {
     const c = byRank.get(r)!.length
-    if (c >= 4 && r < 16) for (let n = 4; n <= Math.min(8, c); n++) out.push(canonPick(byRank.get(r)!, n))
+    if (c >= 4 && r < RANK.SJ) for (let n = 4; n <= Math.min(8, c); n++) out.push(canonPick(byRank.get(r)!, n))
   }
   // 天炸
-  const sj = byRank.get(16) ?? []
-  const bj = byRank.get(17) ?? []
+  const sj = byRank.get(RANK.SJ) ?? []
+  const bj = byRank.get(RANK.BJ) ?? []
   if (sj.length === 2 && bj.length === 2) {
     out.push([...canonPick(sj, 2), ...canonPick(bj, 2)])
   }
   // 三带二
   for (const r3 of ranks) {
-    if (byRank.get(r3)!.length < 3 || r3 >= 16) continue
+    if (byRank.get(r3)!.length < 3 || r3 >= RANK.SJ) continue
     for (const r2 of ranks) {
-      if (r2 === r3 || byRank.get(r2)!.length < 2 || r2 >= 16) continue
+      if (r2 === r3 || byRank.get(r2)!.length < 2 || r2 >= RANK.SJ) continue
       out.push([...canonPick(byRank.get(r3)!, 3), ...canonPick(byRank.get(r2)!, 2)])
     }
   }
-  // 顺子 / 同花顺
-  for (let lo = 3; lo <= 10; lo++) {
+  // 顺子 / 同花顺：2 起、A 可高可低（级牌在顺子里按原点数）
+  const straightSeqs: number[][] = []
+  for (let lo = RANK.TWO; lo <= 10; lo++) {
     if (![0, 1, 2, 3, 4].every((i) => has(lo + i))) continue
-    const seq = [0, 1, 2, 3, 4].map((i) => canonPick(byRank.get(lo + i)!, 1)[0]!)
-    out.push(seq)
+    straightSeqs.push([lo, lo + 1, lo + 2, lo + 3, lo + 4])
+  }
+  if (has(RANK.ACE) && has(RANK.TWO) && has(3) && has(4) && has(5)) {
+    straightSeqs.push([RANK.ACE, RANK.TWO, 3, 4, 5])
+  }
+  for (const seq of straightSeqs) {
+    out.push(seq.map((r) => canonPick(byRank.get(r)!, 1)[0]!))
     for (const suit of [0, 1, 2, 3]) {
       const flushSeq: Card[] = []
       let ok = true
-      for (let i = 0; i < 5; i++) {
-        const copy = byRank.get(lo + i)!.find((c) => c.suit === suit)
+      for (const r of seq) {
+        const copy = byRank.get(r)!.find((c) => c.suit === suit)
         if (!copy) { ok = false; break }
         flushSeq.push(copy)
       }
       if (ok) out.push(flushSeq)
     }
   }
-  // 连对
-  for (let lo = 3; lo <= 9; lo++) {
-    for (let count = 3; lo + count - 1 <= 14; count++) {
-      const seqRanks = Array.from({ length: count }, (_, i) => lo + i)
-      if (!seqRanks.every((r) => (byRank.get(r)?.length ?? 0) >= 2)) continue
+  // 连对：级数那一点跳过（级牌不算原点数）
+  const pairSeqRanks = ranks.filter((r) => r < RANK.SJ && r !== levelRank)
+  for (const lo of pairSeqRanks) {
+    for (let count = 3; count <= 12; count++) {
+      const seqRanks: number[] = []
+      let ok = true
+      for (let i = 0; i < count; i++) {
+        const r = lo + i
+        if (r > RANK.ACE || r === levelRank || (byRank.get(r)?.length ?? 0) < 2) { ok = false; break }
+        seqRanks.push(r)
+      }
+      if (!ok || seqRanks.length < count) break
       out.push(seqRanks.flatMap((r) => canonPick(byRank.get(r)!, 2)))
     }
   }
   // 钢板
-  for (let lo = 3; lo <= 13; lo++) {
-    for (let count = 2; lo + count - 1 <= 14; count++) {
-      const seqRanks = Array.from({ length: count }, (_, i) => lo + i)
-      if (!seqRanks.every((r) => (byRank.get(r)?.length ?? 0) >= 3)) continue
+  for (const lo of pairSeqRanks) {
+    for (let count = 2; count <= 10; count++) {
+      const seqRanks: number[] = []
+      let ok = true
+      for (let i = 0; i < count; i++) {
+        const r = lo + i
+        if (r > RANK.ACE || r === levelRank || (byRank.get(r)?.length ?? 0) < 3) { ok = false; break }
+        seqRanks.push(r)
+      }
+      if (!ok || seqRanks.length < count) break
       out.push(seqRanks.flatMap((r) => canonPick(byRank.get(r)!, 3)))
     }
   }
 
   const combos: Combo[] = []
   for (const cards of out) {
-    const combo = identify(cards)
+    const combo = identify(cards, st.handLevel)
     if (combo) combos.push(combo)
   }
   const table = st.trick.table

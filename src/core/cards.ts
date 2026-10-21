@@ -1,4 +1,6 @@
 export const RANK = {
+  /** 2 是最小牌（官方淮安口径：2 最小、A 之上是级牌、级牌之上才是王） */
+  TWO: 2,
   THREE: 3,
   FOUR: 4,
   FIVE: 5,
@@ -11,9 +13,10 @@ export const RANK = {
   QUEEN: 12,
   KING: 13,
   ACE: 14,
+  /** 级牌比较值：大于 A(14)，小于小王(16) */
+  LEVEL: 15,
   SJ: 16,
   BJ: 17,
-  TWO: 18,
 } as const
 
 export type Rank = (typeof RANK)[keyof typeof RANK]
@@ -23,8 +26,8 @@ export const SUIT = { SPADE: 0, HEART: 1, CLUB: 2, DIAMOND: 3 } as const
 export type Card = { id: string; rank: number; suit: number }
 
 export const RANK_LABEL: Record<number, string> = {
-  3: '3', 4: '4', 5: '5', 6: '6', 7: '7', 8: '8', 9: '9', 10: '10',
-  11: 'J', 12: 'Q', 13: 'K', 14: 'A', 16: '小王', 17: '大王', 18: '2',
+  2: '2', 3: '3', 4: '4', 5: '5', 6: '6', 7: '7', 8: '8', 9: '9', 10: '10',
+  11: 'J', 12: 'Q', 13: 'K', 14: 'A', 15: '级', 16: '小王', 17: '大王',
 }
 
 const SUIT_ABBR = ['s', 'h', 'c', 'd']
@@ -33,14 +36,11 @@ export function cardId(suit: number, rank: number, deckNo = 0): string {
   return `${SUIT_ABBR[suit] ?? 'x'}${rank}-${deckNo}`
 }
 
-const isFaceRank = (r: number) => (r >= RANK.THREE && r <= RANK.ACE) || r === RANK.TWO
-
 export function buildDeck(): Card[] {
   const d: Card[] = []
   for (let deckNo = 0; deckNo < 2; deckNo++) {
     for (let s = 0; s < 4; s++) {
-      for (let r = RANK.THREE; r <= RANK.TWO; r++) {
-        if (!isFaceRank(r)) continue
+      for (let r = RANK.TWO; r <= RANK.ACE; r++) {
         d.push({ id: cardId(s, r, deckNo), rank: r, suit: s })
       }
     }
@@ -68,13 +68,27 @@ export function newShuffledDeck(opts?: { seed?: number }): Card[] {
   return cards
 }
 
-export function sortCards(hand: Card[]): Card[] {
-  return [...hand].sort((a, b) => b.rank - a.rank || a.suit - b.suit)
+/**
+ * 排序：按比较值降序（给了本局级数时，级牌排在 A 上面）。
+ */
+export function sortCards(hand: Card[], level?: number): Card[] {
+  const val = (c: Card) => (level != null ? effectiveRank(c, level) : c.rank)
+  return [...hand].sort((a, b) => val(b) - val(a) || a.suit - b.suit)
 }
 
-/** 级数（2..14，14=A）→ 牌面点数编码（2 级对应 RANK.TWO = 18）。 */
+/** 级数（2..14，14=A）→ 牌面点数编码。 */
 export function levelToRank(level: number): number {
-  return level === 2 ? RANK.TWO : level
+  return level
+}
+
+/** 本局级牌：点数等于本局级数的牌，比较时算 RANK.LEVEL（大于 A、小于王）。 */
+export function isLevelCard(c: Card, level: number): boolean {
+  return c.rank === levelToRank(level)
+}
+
+/** 牌在本局的比较值：级牌按 15 算，其余按原点数。 */
+export function effectiveRank(c: Card, level: number): number {
+  return isLevelCard(c, level) ? RANK.LEVEL : c.rank
 }
 
 /** 级数的显示名：2 3 … 10 J Q K A。 */
@@ -90,9 +104,10 @@ export function cardIdToRank(id: string): number {
   return Number(id.slice(1, id.lastIndexOf('-')))
 }
 
-/** 理牌（花色模式）：王置首，随后按 ♠→♥→♣→♦ 分组，组内点数降序；同点同花色保持输入相对顺序。 */
-export function sortBySuitGroups(hand: Card[]): Card[] {
-  return [...hand].sort((a, b) => suitGroup(a) - suitGroup(b) || b.rank - a.rank)
+/** 理牌（花色模式）：王置首，随后按 ♠→♥→♣→♦ 分组，组内按比较值降序（级牌在 A 之上）。 */
+export function sortBySuitGroups(hand: Card[], level?: number): Card[] {
+  const val = (c: Card) => (level != null ? effectiveRank(c, level) : c.rank)
+  return [...hand].sort((a, b) => suitGroup(a) - suitGroup(b) || val(b) - val(a))
 }
 
 /** 王（suit = -1）单独成组且排最前。 */

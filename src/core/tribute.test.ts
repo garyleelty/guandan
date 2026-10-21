@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { RANK, sortCards } from './cards'
+import { sortCards } from './cards'
 import type { Card } from './cards'
 import { newGame, newTributeRound, step } from './engine'
 import type { Seat } from './engine'
@@ -148,10 +148,10 @@ describe('还牌与新局', () => {
     const { s } = finishedRound()
     const t = newTributeRound(s)!
     const card = t.players[3]!.hand[0]!
-    let st = step(t, { kind: 'give', seat: 3, card: card.id })
-    // 找一个大于 10 的牌（2 记 18）
-    const two = st.players[0]!.hand.find((c) => c.rank === RANK.TWO)
-    if (two) expect(step(st, { kind: 'give', seat: 0, card: two.id })).toBe(st)
+    const st = step(t, { kind: 'give', seat: 3, card: card.id })
+    // 找一个大于 10 的牌（J 及以上）
+    const big = st.players[0]!.hand.find((c) => c.rank > 10)
+    if (big) expect(step(st, { kind: 'give', seat: 0, card: big.id })).toBe(st)
   })
 })
 
@@ -175,8 +175,8 @@ describe('双下游', () => {
     expect(s.players.map((p) => p.finishOrder)).toEqual([0, 2, 1, 3]) // 0 头游、2 二游、1 三游、3 四游
     const t = newTributeRound(s)!
     expect(t.tribute!.givers).toEqual([3, 1]) // 四游与三游都进贡
-    // 四游手里最大的是 2（记 18），三游手里是 6
-    const fromFourth = t.players[3]!.hand.find((c) => c.rank === RANK.TWO)!
+    // 四游手里最大的是 7，三游手里最大的是 6（2 现在是最小的牌）
+    const fromFourth = t.players[3]!.hand.find((c) => c.rank === 7)!
     const fromThird = t.players[1]!.hand.find((c) => c.rank === 6)!
     let g = step(t, { kind: 'give', seat: 3, card: fromFourth.id })
     g = step(g, { kind: 'give', seat: 1, card: fromThird.id })

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useStore } from '../state/store'
 import { createRoom, nick } from '../net/host'
 import { codeFromUrl } from '../net/room'
-import { buildDeck } from '../core/cards'
+import { RANK, buildDeck } from '../core/cards'
 import { CardFace } from './CardFace'
 import { Mark } from './Mark'
 
@@ -19,7 +19,7 @@ const RULES = [
 const MOTIF = (() => {
   const deck = buildDeck()
   const pick = (rank: number, suit: number) => deck.find((c) => c.rank === rank && c.suit === suit)!
-  return [pick(18, 0), pick(14, 1), deck.find((c) => c.rank === 17)!]
+  return [pick(RANK.TWO, 0), pick(RANK.ACE, 1), deck.find((c) => c.rank === RANK.BJ)!]
 })()
 
 export function Lobby() {

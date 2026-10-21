@@ -126,7 +126,7 @@ describe('sortBySuitGroups（理牌·花色模式）', () => {
 })
 
 describe('级牌（level）', () => {
-  it('2 级对应牌面点数 18（2），3..14 保持不变', () => {
+  it('2 级对应牌面点数 2，3..14 保持不变', () => {
     expect(levelToRank(2)).toBe(RANK.TWO)
     expect(levelToRank(3)).toBe(3)
     expect(levelToRank(14)).toBe(RANK.ACE)
@@ -150,7 +150,7 @@ describe('级牌（level）', () => {
 describe('cardIdToRank', () => {
   it('普通牌 id 反解点数', () => {
     expect(cardIdToRank('s14-0')).toBe(RANK.ACE)
-    expect(cardIdToRank('d18-1')).toBe(RANK.TWO)
+    expect(cardIdToRank('d2-1')).toBe(RANK.TWO)
     expect(cardIdToRank('c3-0')).toBe(RANK.THREE)
   })
   it('王 id 反解点数', () => {

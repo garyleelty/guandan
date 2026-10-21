@@ -200,11 +200,11 @@ describe('aiTributeMove（进贡阶段）', () => {
     if (move.kind === 'give') expect(move.card).toBeUndefined()
   })
 
-  it('还牌：还最小的一张 ≤10 的牌', () => {
+  it('还牌：还最小的一张 ≤10 的牌（2 现在是最小的牌）', () => {
     const { st, fid } = scenario({ A: ['3', '5', '2'], B: ['4'], C: ['7'], D: ['8'] })
     const t = tributeState(st, 0, 'return')
     const move = aiTributeMove(t, 0)
     expect(move.kind).toBe('give')
-    if (move.kind === 'give') expect(move.card).toBe(fid('3'))
+    if (move.kind === 'give') expect(move.card).toBe(fid('2'))
   })
 })
