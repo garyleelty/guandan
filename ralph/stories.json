@@ -877,6 +877,38 @@
         }
       ],
       "status": "done"
+    },
+    {
+      "id": "S34",
+      "title": "房间页：说清楚为什么不能开局 + 手机上链接不再被挤没 + 尊重减弱动效",
+      "criteria": [
+        {
+          "id": "S34-1",
+          "desc": "「开始对局」禁用时说明原因（还差几个座位、可以加 AI 或等朋友）",
+          "check": "cmd"
+        },
+        {
+          "id": "S34-2",
+          "desc": "空位标签从「虚位」改成「空位」",
+          "check": "manual"
+        },
+        {
+          "id": "S34-3",
+          "desc": "观战链接在手机上换行显示，输入框不再被按钮挤到只剩前缀",
+          "check": "cmd"
+        },
+        {
+          "id": "S34-4",
+          "desc": "支持系统的 prefers-reduced-motion：关掉落牌动画和过渡",
+          "check": "cmd"
+        },
+        {
+          "id": "S34-5",
+          "desc": "验收：151 tests + 九条冒烟全过 + inspect 0 FAIL 0 WARN",
+          "check": "cmd"
+        }
+      ],
+      "status": "done"
     }
   ]
 }

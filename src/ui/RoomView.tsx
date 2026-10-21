@@ -121,7 +121,7 @@ function GuestWaiting({
               <div className="flex min-w-0 items-baseline gap-2">
                 <span className="shrink-0 text-sm text-ink">{SEAT_LABEL[s.seat]}</span>
                 {s.kind === 'empty' ? (
-                  <span className="text-sm text-faint">虚位</span>
+                  <span className="text-sm text-faint">空位</span>
                 ) : (
                   <>
                     <span
@@ -174,6 +174,7 @@ const AI_LEVELS: { v: 0 | 1 | 2; label: string }[] = [
 function HostSide({ code, seats }: { code: string | null; seats: RoomSeats }) {
   const link = code ? shareLink(code) : ''
   const seatList = seats ?? []
+  const emptySeats = seatList.filter((s) => s.kind === 'empty').length
   const aiLevel = useStore((s) => s.aiLevel)
   const watchers = useStore((s) => s.roomWatchers)
   const watchLink = code ? `${shareLink(code)}&watch=1` : ''
@@ -203,15 +204,15 @@ function HostSide({ code, seats }: { code: string | null; seats: RoomSeats }) {
           </button>
         </div>
 
-        <div className="mt-4 flex items-center gap-2">
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
           <input
             readOnly
             value={watchLink}
-            className="h-9 min-w-0 flex-1 rounded-control border border-line bg-raised px-3 text-xs font-mono text-muted"
+            className="h-9 w-full min-w-0 flex-1 rounded-control border border-line bg-raised px-3 text-xs font-mono text-muted"
             data-testid="watch-link"
           />
           <button
-            className="btn btn-secondary btn-sm shrink-0"
+            className="btn btn-secondary btn-sm w-full shrink-0 sm:w-auto"
             onClick={() => {
               navigator.clipboard?.writeText(watchLink)
             }}
@@ -253,7 +254,7 @@ function HostSide({ code, seats }: { code: string | null; seats: RoomSeats }) {
               <div className="flex min-w-0 items-baseline gap-2">
                 <span className="shrink-0 text-sm text-ink">{SEAT_LABEL[s.seat]}</span>
                 {s.kind === 'empty' ? (
-                  <span className="text-sm text-faint">虚位</span>
+                  <span className="text-sm text-faint">空位</span>
                 ) : (
                   <>
                     <span
@@ -303,12 +304,17 @@ function HostSide({ code, seats }: { code: string | null; seats: RoomSeats }) {
 
         <button
           className="btn btn-primary mt-6 min-h-11 w-full"
-          disabled={seatList.some((s) => s.kind === 'empty')}
+          disabled={emptySeats > 0}
           onClick={() => hostStart()}
           data-testid="host-start"
         >
           开始对局
         </button>
+        {emptySeats > 0 && (
+          <p className="mt-2 text-center text-[12px] text-faint">
+            还差 {emptySeats} 个座位：可以加 AI，也可以把链接发给朋友等他们进来。
+          </p>
+        )}
         <button
           className="btn btn-ghost mt-2 w-full"
           onClick={() => {
