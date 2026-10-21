@@ -206,3 +206,37 @@ describe('还牌卡死的兜底', () => {
     }
   })
 })
+
+describe('进贡新局：牌不能重', () => {
+  it('贡牌要从新牌堆里剔掉，同一张牌不能出现在两个人手里', () => {
+    // 打一局到结束 → 进贡局 → 交贡 → 还牌
+    const { st } = scenario({ A: ['3'], B: ['6'], C: ['8', '5'], D: ['9', '4'] })
+    let s = st
+    s.phase = 'ended'
+    s.players[0]!.finishOrder = 0
+    s.players[1]!.finishOrder = 1
+    s.players[2]!.finishOrder = 2
+    s.players[3]!.finishOrder = 3
+    const t = newTributeRound(s)!
+    // 下游（3 号位）向上游进贡
+    const giver = t.tribute!.givers[0]!
+    const card = t.players[giver]!.hand[0]!
+    let x = step(t, { kind: 'give', seat: giver, card: card.id })
+    // 上游还一张 10 以下的牌
+    const returnee = x.tribute!.returnees[0]!
+    const back = x.players[returnee]!.hand.find((c) => c.rank <= 10)!
+    x = step(x, { kind: 'give', seat: returnee, card: back.id })
+    expect(x.phase).toBe('playing')
+
+    // 每个人手里不能有重复的牌
+    for (const p of x.players) {
+      const ids = p.hand.map((c) => c.id)
+      expect(new Set(ids).size).toBe(ids.length)
+    }
+    // 四家加起来正好 108 张
+    expect(x.players.reduce((n, p) => n + p.hand.length, 0)).toBe(108)
+    // 全场 108 张牌互不相同
+    const all = x.players.flatMap((p) => p.hand.map((c) => c.id))
+    expect(new Set(all).size).toBe(108)
+  })
+})

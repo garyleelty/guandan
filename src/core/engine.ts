@@ -305,7 +305,9 @@ function startTributeReturns(st: GameState): GameState {
   tt.leader = leader
 
   // 发新局：贡牌不进牌堆，直接进收贡者手牌；进贡者少拿一张（要收回还牌）
-  const deck = newShuffledDeck({ seed: tt.seed })
+  // 关键：贡牌要从新牌堆里剔掉——不然同一张牌会同时出现在牌堆和收贡者手里
+  const givenIds = new Set(payers.map((g) => tt.cards[g]!.id))
+  const deck = newShuffledDeck({ seed: tt.seed }).filter((c) => !givenIds.has(c.id))
   const players: Player[] = st.players.map((p) => ({ ...p, hand: [] as Card[], finishOrder: null }))
   let i = 0
   for (const p of players) {
