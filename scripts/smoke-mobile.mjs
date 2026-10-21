@@ -23,5 +23,30 @@ await p.eval('document.querySelector("[data-testid=hand-view]").click()')
 await sleep(400)
 const backToRow = await p.eval('document.querySelectorAll("button[aria-label]:not([aria-label=\\"静音\\"])").length')
 
-console.log(JSON.stringify({ cardCount, gridCards, visible: JSON.parse(visible), backToRow, errors: p.consoleErrors }, null, 2))
+// 底部操作区：按钮不能被挤出屏幕（之前「出牌」会被切掉）
+const bar = JSON.parse(
+  await p.eval(`(() => {
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+    // 只看操作区那一行按钮（手牌在可横向滚动的条里，超出是故意的）
+    const row = document.querySelector('footer > div')
+    const buttons = [...row.querySelectorAll('button')].map(b => {
+      const r = b.getBoundingClientRect()
+      return { label: b.textContent.trim(), right: Math.round(r.right), bottom: Math.round(r.bottom) }
+    })
+    return JSON.stringify({
+      vw,
+      buttons,
+      overflowRight: buttons.filter(b => b.right > vw + 1).map(b => b.label),
+      overflowBottom: buttons.filter(b => b.bottom > vh + 1).map(b => b.label),
+      pageOverflowX: document.documentElement.scrollWidth > vw,
+    })
+  })()`),
+)
+const barOk = bar.overflowRight.length === 0 && bar.overflowBottom.length === 0 && !bar.pageOverflowX
+
+console.log(
+  JSON.stringify({ cardCount, gridCards, visible: JSON.parse(visible), backToRow, bar, barOk, errors: p.consoleErrors }, null, 2),
+)
 await b.close()
+if (!barOk) process.exit(1)

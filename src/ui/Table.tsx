@@ -409,9 +409,9 @@ export function Table() {
             </span>
           ) : null}
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
             <button
-              className="btn btn-ghost btn-sm"
+              className="btn btn-ghost btn-sm max-sm:px-2"
               onClick={() => setHandView((v) => (v === 'row' ? 'grid' : 'row'))}
               title={handView === 'row' ? '摊开手牌，看清每一张' : '收回手牌'}
               data-testid="hand-view"
@@ -419,7 +419,7 @@ export function Table() {
               {handView === 'row' ? '摊牌' : '收牌'}
             </button>
             <button
-              className="btn btn-ghost btn-sm"
+              className="btn btn-ghost btn-sm max-sm:px-2"
               onClick={() => setShowHistory(true)}
               title="这一局每一手出的真实牌面"
               data-testid="play-log"
@@ -427,7 +427,7 @@ export function Table() {
               牌谱
             </button>
             <button
-              className="btn btn-ghost btn-sm"
+              className="btn btn-ghost btn-sm max-sm:px-2"
               onClick={askHint}
               disabled={!myTurn}
               title="按 AI 的走法替你选好牌"
@@ -436,7 +436,7 @@ export function Table() {
               提示
             </button>
             <button
-              className="btn btn-ghost btn-sm"
+              className="btn btn-ghost btn-sm max-sm:px-2"
               onClick={() => setHandMode((m) => (m === 'rank' ? 'suit' : 'rank'))}
               title="点数排序 / 按花色聚拢"
               data-testid="sort-hand"
