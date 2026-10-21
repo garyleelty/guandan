@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { RANK, buildDeck, deal, newShuffledDeck, sortCards } from './cards'
+import { RANK, buildDeck, cardIdToRank, deal, levelLabel, levelToRank, newShuffledDeck, sortBySuitGroups, sortCards } from './cards'
 import type { Card } from './cards'
 
 describe('buildDeck', () => {
@@ -48,6 +48,118 @@ describe('sortCards', () => {
       { id: 'sj-0', rank: RANK.SJ, suit: -1 },
     ]
     expect(sortCards(cards).map((c) => c.id)).toEqual(['bj-0', 'sj-0', 'sA-0'])
+  })
+})
+
+describe('sortBySuitGroups（理牌·花色模式）', () => {
+  const hand: Card[] = [
+    { id: 'd5-0', rank: 5, suit: 3 },
+    { id: 'sK-0', rank: RANK.KING, suit: 0 },
+    { id: 'h9-0', rank: 9, suit: 1 },
+    { id: 'c5-0', rank: 5, suit: 2 },
+    { id: 's5-0', rank: 5, suit: 0 },
+    { id: 'bj-0', rank: RANK.BJ, suit: -1 },
+    { id: 'sj-0', rank: RANK.SJ, suit: -1 },
+  ]
+
+  it('大小王置首（大王在小王之前）', () => {
+    const out = sortBySuitGroups(hand)
+    expect(out.slice(0, 2).map((c) => c.id)).toEqual(['bj-0', 'sj-0'])
+  })
+
+  it('花色顺序 ♠ → ♥ → ♣ → ♦', () => {
+    const out = sortBySuitGroups(hand)
+    const suits = out.filter((c) => c.suit >= 0).map((c) => c.suit)
+    expect(suits).toEqual([...suits].sort((a, b) => a - b))
+    expect(suits).toEqual([0, 0, 1, 2, 3])
+  })
+
+  it('同花色全部相邻', () => {
+    const out = sortBySuitGroups(hand)
+    const suits = out.filter((c) => c.suit >= 0).map((c) => c.suit)
+    for (let i = 1; i < suits.length; i++) {
+      if (suits[i] !== suits[i - 1]) {
+        expect(suits.slice(i).includes(suits[i - 1]!)).toBe(false)
+      }
+    }
+  })
+
+  it('组内点数降序', () => {
+    const out = sortBySuitGroups(hand)
+    const spades = out.filter((c) => c.suit === 0)
+    expect(spades.map((c) => c.rank)).toEqual([RANK.KING, 5])
+  })
+
+  it('同点同花色（两副牌重复）保持输入相对顺序', () => {
+    const dup: Card[] = [
+      { id: 's5-0', rank: 5, suit: 0 },
+      { id: 's5-1', rank: 5, suit: 0 },
+    ]
+    expect(sortBySuitGroups(dup).map((c) => c.id)).toEqual(['s5-0', 's5-1'])
+    expect(sortBySuitGroups([...dup].reverse()).map((c) => c.id)).toEqual(['s5-1', 's5-0'])
+  })
+
+  it('不修改入参，返回新数组', () => {
+    const input = [...hand]
+    const out = sortBySuitGroups(input)
+    expect(input.map((c) => c.id)).toEqual(hand.map((c) => c.id))
+    expect(out).not.toBe(input)
+  })
+
+  it('空数组 / 单张不崩', () => {
+    expect(sortBySuitGroups([])).toEqual([])
+    const one: Card = { id: 'sA-0', rank: RANK.ACE, suit: 0 }
+    expect(sortBySuitGroups([one])).toEqual([one])
+  })
+
+  it('对整副 27 张手牌排序：牌不丢、同花相邻、王在最前', () => {
+    const h = sortBySuitGroups(newShuffledDeck({ seed: 21 }).slice(0, 27))
+    expect(h).toHaveLength(27)
+    expect(new Set(h.map((c) => c.id)).size).toBe(27)
+    const jokers = h.filter((c) => c.suit === -1)
+    expect(h.slice(0, jokers.length).every((c) => c.suit === -1)).toBe(true)
+    const suits = h.filter((c) => c.suit >= 0).map((c) => c.suit)
+    for (let i = 1; i < suits.length; i++) {
+      if (suits[i] !== suits[i - 1]) expect(suits.slice(i).includes(suits[i - 1]!)).toBe(false)
+    }
+  })
+})
+
+describe('级牌（level）', () => {
+  it('2 级对应牌面点数 18（2），3..14 保持不变', () => {
+    expect(levelToRank(2)).toBe(RANK.TWO)
+    expect(levelToRank(3)).toBe(3)
+    expect(levelToRank(14)).toBe(RANK.ACE)
+  })
+
+  it('级数显示名：2 3 … 10 J Q K A', () => {
+    expect(levelLabel(2)).toBe('2')
+    expect(levelLabel(10)).toBe('10')
+    expect(levelLabel(11)).toBe('J')
+    expect(levelLabel(12)).toBe('Q')
+    expect(levelLabel(13)).toBe('K')
+    expect(levelLabel(14)).toBe('A')
+  })
+
+  it('2 级在手上能找到对应的 2', () => {
+    const hand = newShuffledDeck({ seed: 5 }).filter((c) => c.rank === levelToRank(2))
+    expect(hand.length).toBeGreaterThan(0)
+  })
+})
+
+describe('cardIdToRank', () => {
+  it('普通牌 id 反解点数', () => {
+    expect(cardIdToRank('s14-0')).toBe(RANK.ACE)
+    expect(cardIdToRank('d18-1')).toBe(RANK.TWO)
+    expect(cardIdToRank('c3-0')).toBe(RANK.THREE)
+  })
+  it('王 id 反解点数', () => {
+    expect(cardIdToRank('sj-0')).toBe(RANK.SJ)
+    expect(cardIdToRank('bj-1')).toBe(RANK.BJ)
+  })
+  it('整副牌反解后与原牌一致', () => {
+    const deck = buildDeck()
+    expect(deck.every((c) => cardIdToRank(c.id) === c.rank)).toBe(true)
   })
 })
 

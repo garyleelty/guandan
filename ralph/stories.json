@@ -128,6 +128,38 @@
         }
       ],
       "status": "done"
+    },
+    {
+      "id": "S7",
+      "title": "UI 改版：夜桌（true-black flat）+ 理牌 + 记牌器",
+      "criteria": [
+        {
+          "id": "S7-1",
+          "desc": "core: sortBySuitGroups（花色聚拢排序）+ levelToRank/levelLabel/cardIdToRank 三个纯函数，各带单测",
+          "check": "cmd"
+        },
+        {
+          "id": "S7-2",
+          "desc": "牌桌：顶栏（标记/级牌阶梯/范围/音效）、三家牌背、出牌记录条、记牌器条、操作条（出牌/过/理牌）",
+          "check": "manual"
+        },
+        {
+          "id": "S7-3",
+          "desc": "大厅/房间/结算按新令牌重做；无渐变、无玻璃、无 emoji、花色改矢量",
+          "check": "manual"
+        },
+        {
+          "id": "S7-4",
+          "desc": "tasteskill inspect --app 0 FAIL 0 WARN（大厅与牌桌各一次）",
+          "check": "cmd"
+        },
+        {
+          "id": "S7-5",
+          "desc": "真浏览器冒烟：出牌→AI 接牌→整局到结算；理牌切换排序；截图重出 docs/screenshots/",
+          "check": "cmd"
+        }
+      ],
+      "status": "done"
     }
   ]
 }

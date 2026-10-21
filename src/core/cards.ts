@@ -72,6 +72,34 @@ export function sortCards(hand: Card[]): Card[] {
   return [...hand].sort((a, b) => b.rank - a.rank || a.suit - b.suit)
 }
 
+/** 级数（2..14，14=A）→ 牌面点数编码（2 级对应 RANK.TWO = 18）。 */
+export function levelToRank(level: number): number {
+  return level === 2 ? RANK.TWO : level
+}
+
+/** 级数的显示名：2 3 … 10 J Q K A。 */
+export function levelLabel(level: number): string {
+  if (level < 3) return '2'
+  return RANK_LABEL[level] ?? String(level)
+}
+
+/** 从牌 id 反解点数（"s14-0" → 14，"sj-0" → 16，"bj-0" → 17）。 */
+export function cardIdToRank(id: string): number {
+  if (id.startsWith('sj-')) return RANK.SJ
+  if (id.startsWith('bj-')) return RANK.BJ
+  return Number(id.slice(1, id.lastIndexOf('-')))
+}
+
+/** 理牌（花色模式）：王置首，随后按 ♠→♥→♣→♦ 分组，组内点数降序；同点同花色保持输入相对顺序。 */
+export function sortBySuitGroups(hand: Card[]): Card[] {
+  return [...hand].sort((a, b) => suitGroup(a) - suitGroup(b) || b.rank - a.rank)
+}
+
+/** 王（suit = -1）单独成组且排最前。 */
+function suitGroup(c: Card): number {
+  return c.suit < 0 ? -1 : c.suit
+}
+
 export function deal(deck: Card[]): Card[][] {
   return [0, 1, 2, 3].map((i) => sortCards(deck.slice(i * 27, i * 27 + 27)))
 }

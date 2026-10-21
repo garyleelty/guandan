@@ -1,40 +1,52 @@
 import { RANK_LABEL, SUIT } from '../core/cards'
 import type { Card } from '../core/cards'
+import { Suit } from './Suit'
 
-const SUIT_CH = ['♠', '♥', '♣', '♦']
-
-export function CardFace({ card, small, selected, dim }: { card: Card; small?: boolean; selected?: boolean; dim?: boolean }) {
+/** 牌面：白纸 + 索引角标 + 中央花色。桌面是暗的，牌是桌上唯一的亮物。 */
+export function CardFace({
+  card,
+  small,
+  selected,
+  dim,
+}: {
+  card: Card
+  small?: boolean
+  selected?: boolean
+  dim?: boolean
+}) {
   const isJoker = card.suit === -1
   const red = card.suit === SUIT.HEART || card.suit === SUIT.DIAMOND
-  const label = RANK_LABEL[card.rank] ?? String(card.rank)
+  const label = isJoker ? (card.rank === 17 ? '大王' : '小王') : (RANK_LABEL[card.rank] ?? String(card.rank))
+  const ink = red ? 'text-suit-red' : 'text-card-ink'
+
   return (
     <div
       className={[
-        'relative flex shrink-0 select-none flex-col items-center justify-center gap-[2px] rounded-[8px] font-extrabold leading-none bg-white',
-        'shadow-card transition-all duration-200',
-        small ? 'h-12 w-9 text-[12px]' : 'h-[88px] w-[62px] text-[26px]',
-        selected ? '-translate-y-4 ring-2 ring-blue ring-offset-1 ring-offset-white' : '',
-        dim ? 'opacity-50 saturate-50' : '',
+        'relative flex shrink-0 select-none flex-col rounded-[8px] border border-black/10 bg-card',
+        small ? 'h-[60px] w-[42px]' : 'h-[88px] w-[62px]',
+        selected ? '-translate-y-2 ring-2 ring-accent' : '',
+        dim ? 'opacity-40' : '',
       ].join(' ')}
     >
-      {isJoker && card.rank === 17 ? (
-        <>
-          <span className="text-rose-600" style={{ fontSize: small ? 10 : 15 }}>大王</span>
-          <span className="text-ink3" style={{ fontSize: small ? 8 : 10 }}>JOKER</span>
-        </>
-      ) : isJoker && card.rank === 16 ? (
-        <>
-          <span className="text-ink" style={{ fontSize: small ? 10 : 15 }}>小王</span>
-          <span className="text-ink3" style={{ fontSize: small ? 8 : 10 }}>JOKER</span>
-        </>
-      ) : (
-        <span className={red ? 'text-rose-600' : 'text-ink'}>
-          {label}
-          <span style={{ fontSize: small ? 9 : 14 }}>{SUIT_CH[card.suit]}</span>
-        </span>
-      )}
+      {/* 角标：手牌重叠时露出的正是这一条 */}
+      <div className={`absolute top-1 left-1.5 leading-none ${ink} ${small ? 'text-[12px]' : 'text-[15px]'}`}>
+        <div className="font-bold">{isJoker ? (card.rank === 17 ? '大' : '小') : label}</div>
+        {!isJoker && (
+          <Suit suit={card.suit} className={small ? 'mt-0.5 h-[9px] w-[9px]' : 'mt-0.5 h-[11px] w-[11px]'} />
+        )}
+      </div>
+
+      {/* 中央：花色（大牌）/ 王字（小牌） */}
+      <div className="flex flex-1 items-center justify-center pb-1">
+        {isJoker ? (
+          <div className="text-center leading-none">
+            <div className={`font-bold ${ink} ${small ? 'text-[13px]' : 'text-[19px]'}`}>{label}</div>
+            <div className={`text-card-ink/40 ${small ? 'text-[11px]' : 'text-[11px]'}`}>JOKER</div>
+          </div>
+        ) : (
+          <Suit suit={card.suit} className={`${ink} ${small ? 'h-[22px] w-[22px]' : 'h-[34px] w-[34px]'}`} />
+        )}
+      </div>
     </div>
   )
 }
-
-void SUIT

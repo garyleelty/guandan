@@ -17,6 +17,11 @@ export default function App() {
     if (r && useStore.getState().screen === 'lobby') {
       useStore.setState({ mode: 'guest', screen: 'room' })
       joinRoom(r)
+      return
+    }
+    // ?solo=1 直达牌桌（分享单机局 / 验收截图用）
+    if (new URLSearchParams(window.location.search).get('solo') === '1' && useStore.getState().screen === 'lobby') {
+      useStore.getState().startSolo()
     }
   }, [])
 
@@ -35,6 +40,11 @@ export default function App() {
     }, delay)
     return () => clearTimeout(t)
   }, [match, mode])
+
+  // 调试钩子：验收脚本可驱动 AI 打完整局
+  useEffect(() => {
+    ;(window as unknown as Record<string, unknown>).__gdAi = aiMove
+  }, [])
 
   if (screen === 'room') return <RoomView />
   if (screen === 'table' && match) return <Table />

@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useStore } from '../state/store'
 import { hostAddAi, hostRemoveAi, hostStart, destroyRoom } from '../net/host'
 import { joinRoom, leaveGuest } from '../net/guest'
 import { shareLink, codeFromUrl } from '../net/room'
 import type { Seat } from '../core/engine'
+
+type RoomSeats = ReturnType<typeof useStore.getState>['roomSeats']
 
 export function RoomView() {
   const mode = useStore((s) => s.mode)
@@ -16,35 +18,47 @@ export function RoomView() {
   if (mode === 'guest') {
     if (lost)
       return (
-        <Centered>
-          <div className="text-base font-bold text-ink">连接断开</div>
-          <button className="btn btn-primary mt-4" onClick={() => useStore.getState().backToLobby()}>
-            返回大厅
-          </button>
-        </Centered>
+        <div className="grid h-full place-items-center px-4">
+          <div className="panel w-full max-w-[480px] p-6">
+            <h2 className="text-base font-semibold text-ink">连接断开</h2>
+            <button
+              className="btn btn-secondary mt-4 w-full"
+              onClick={() => useStore.getState().backToLobby()}
+            >
+              返回大厅
+            </button>
+            <p className="mt-3 text-xs text-muted">与房主的连接已断开，牌局由 AI 继续。</p>
+          </div>
+        </div>
       )
     if (joining) return <Centered>正在连接房间…</Centered>
     if (!seats)
       return (
-        <Centered>
-          <div className="text-base font-bold text-ink">输入房码</div>
-          <div className="mt-4 flex gap-2">
-            <input
-              value={codeInput}
-              onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
-              className="w-44 rounded-xl bg-white px-3 py-2 text-center font-mono text-lg tracking-widest shadow-card"
-              maxLength={6}
-              placeholder="ABC123"
-              data-testid="code-input"
-            />
-            <button className="btn btn-primary" data-testid="join-go" onClick={() => joinRoom(codeInput)}>
-              加入
-            </button>
+        <div className="grid h-full place-items-center px-4">
+          <div className="w-full max-w-[480px] text-center">
+            <h2 className="text-xl font-semibold text-ink">输入房码</h2>
+            <div className="mt-6 flex items-center justify-center gap-2">
+              <input
+                value={codeInput}
+                onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+                className="h-10 w-48 rounded-control border border-control bg-surface text-center font-mono text-xl tracking-[0.3em] text-ink placeholder:text-faint"
+                maxLength={6}
+                placeholder="ABC123"
+                data-testid="code-input"
+              />
+              <button
+                className="btn btn-primary"
+                data-testid="join-go"
+                onClick={() => joinRoom(codeInput)}
+              >
+                加入
+              </button>
+            </div>
+            <p className="mt-2 h-4 text-xs text-negative">
+              {codeInput.length === 6 && !/^[2-9A-HJKMNP-Z]{6}$/.test(codeInput) ? '房码格式不对' : ''}
+            </p>
           </div>
-          <div className="mt-2 text-[11px] text-rose-500">
-            {codeInput.length === 6 && !/^[2-9A-HJKMNP-Z]{6}$/.test(codeInput) ? '房码格式不对' : ''}
-          </div>
-        </Centered>
+        </div>
       )
     return <Centered>已加入，等待房东开局…</Centered>
   }
@@ -52,25 +66,37 @@ export function RoomView() {
   return <HostSide code={code} seats={seats} />
 }
 
-function Centered({ children }: { children: React.ReactNode }) {
-  return <div className="grid h-full place-items-center text-sm text-ink3">{children}</div>
+function Centered({ children }: { children: ReactNode }) {
+  return (
+    <div className="grid h-full place-items-center px-4">
+      <p className="text-center text-sm text-muted">{children}</p>
+    </div>
+  )
 }
 
 const SEAT_LABEL = ['本座（房东）', '右家', '对家', '左家'] as const
 
-function HostSide({ code, seats }: { code: string | null; seats: ReturnType<typeof useStore.getState>['roomSeats'] }) {
+function HostSide({ code, seats }: { code: string | null; seats: RoomSeats }) {
   const link = code ? shareLink(code) : ''
+  const seatList = seats ?? []
   return (
-    <div className="mx-auto max-w-md px-4 py-8">
-      <div
-        className="rounded-[28px] bg-white/70 px-6 py-6 backdrop-blur"
-        style={{ boxShadow: 'var(--shadow-soft)', border: '1px solid rgba(0,0,0,.04)' }}
-      >
-        <div className="text-xl font-bold text-ink">房间 {code}</div>
-        <div className="mt-1 flex items-center gap-2 text-xs text-ink3">
-          <input readOnly value={link} className="w-full rounded-lg bg-paper px-2 py-1 font-mono text-[11px]" data-testid="room-link" />
+    <div className="mx-auto w-full max-w-[480px] px-4 py-8">
+      <div className="panel p-5">
+        <div className="flex items-baseline justify-between gap-3">
+          <h1 className="text-xl font-semibold text-ink">房间</h1>
+          <div className="num text-2xl font-semibold tracking-[0.2em] text-accent">{code}</div>
+        </div>
+
+        <div className="mt-4 flex items-center gap-2">
+          <input
+            readOnly
+            value={link}
+            className="h-9 min-w-0 flex-1 rounded-control border border-line bg-raised px-3 text-xs font-mono text-muted"
+            data-testid="room-link"
+          />
           <button
-            className="btn btn-ghost shrink-0 text-xs"
+            className="btn btn-secondary btn-sm shrink-0"
+            data-testid="copy-link"
             onClick={() => {
               navigator.clipboard?.writeText(link)
             }}
@@ -78,24 +104,42 @@ function HostSide({ code, seats }: { code: string | null; seats: ReturnType<type
             复制
           </button>
         </div>
-        <div className="mt-5 space-y-2">
-          {seats!.map((s) => (
-            <div key={s.seat} className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-card">
-              <div className="text-sm font-semibold text-ink">
-                {SEAT_LABEL[s.seat]} ·{' '}
-                <span className={s.kind === 'empty' ? 'text-ink3' : s.kind === 'ai' ? 'text-orange' : 'text-blue'}>
-                  {s.kind === 'empty' ? '虚位' : s.name}
-                </span>
+
+        <div className="mt-5 divide-y divide-rule border-y border-rule">
+          {seatList.map((s) => (
+            <div key={s.seat} className="flex h-11 items-center justify-between gap-3">
+              <div className="flex min-w-0 items-baseline gap-2">
+                <span className="shrink-0 text-sm text-ink">{SEAT_LABEL[s.seat]}</span>
+                {s.kind === 'empty' ? (
+                  <span className="text-sm text-faint">虚位</span>
+                ) : (
+                  <>
+                    <span
+                      className={
+                        s.kind === 'ai' ? 'truncate text-sm text-muted' : 'truncate text-sm text-accent'
+                      }
+                    >
+                      {s.name}
+                    </span>
+                    <span className="chip">{s.kind === 'ai' ? 'AI' : '玩家'}</span>
+                  </>
+                )}
               </div>
               {s.seat !== 0 && (
-                <div className="flex gap-1.5">
+                <div className="shrink-0">
                   {s.kind === 'empty' && (
-                    <button className="btn btn-ghost text-xs" onClick={() => hostAddAi(s.seat as Seat)}>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => hostAddAi(s.seat as Seat)}
+                    >
                       +AI
                     </button>
                   )}
                   {s.kind === 'ai' && (
-                    <button className="btn btn-ghost text-xs" onClick={() => hostRemoveAi(s.seat as Seat)}>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => hostRemoveAi(s.seat as Seat)}
+                    >
                       移除
                     </button>
                   )}
@@ -104,16 +148,17 @@ function HostSide({ code, seats }: { code: string | null; seats: ReturnType<type
             </div>
           ))}
         </div>
+
         <button
-          className="btn btn-primary mt-5 w-full py-3"
-          disabled={seats!.some((s) => s.kind === 'empty')}
+          className="btn btn-primary mt-6 min-h-11 w-full"
+          disabled={seatList.some((s) => s.kind === 'empty')}
           onClick={() => hostStart()}
           data-testid="host-start"
         >
           开始对局
         </button>
         <button
-          className="btn btn-ghost mt-2 w-full py-2 text-sm"
+          className="btn btn-ghost mt-2 w-full"
           onClick={() => {
             destroyRoom()
             leaveGuest()
@@ -122,7 +167,7 @@ function HostSide({ code, seats }: { code: string | null; seats: ReturnType<type
         >
           取消房间
         </button>
-        <p className="mt-3 text-[11px] leading-relaxed text-ink3">
+        <p className="mt-3 text-xs leading-relaxed text-muted">
           房东固定本座；把链接发给朋友补位，虚位由 AI 代打。中途掉线的玩家由 AI 接手。
         </p>
       </div>
