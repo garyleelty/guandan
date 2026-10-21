@@ -40,6 +40,12 @@ await p.goto('http://localhost:5173/')
 await sleep(1200)
 results.push(JSON.parse(await check('大厅')))
 
+await p.eval('document.querySelector("[data-testid=open-help]").click()')
+await sleep(500)
+results.push(JSON.parse(await check('玩法说明')))
+await p.eval('document.querySelector("[data-testid=help-close]").click()')
+await sleep(300)
+
 await p.eval('document.querySelector("[data-testid=solo]").click()')
 await sleep(1200)
 for (let i = 0; i < 8; i++) {

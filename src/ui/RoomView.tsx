@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { HelpSheet } from './HelpSheet'
 import { useStore } from '../state/store'
 import { hostAddAi, hostKick, hostRemoveAi, hostStart, destroyRoom } from '../net/host'
 import { joinRoom, leaveGuest } from '../net/guest'
@@ -15,6 +16,7 @@ export function RoomView() {
   const lost = useStore((s) => s.guestLost)
   const kicked = useStore((s) => s.kicked)
   const [codeInput, setCodeInput] = useState(codeFromUrl() ?? '')
+  const [showHelp, setShowHelp] = useState(false)
 
   if (mode === 'guest') {
     if (lost)
@@ -63,14 +65,32 @@ export function RoomView() {
           </div>
         </div>
       )
-    return <GuestWaiting code={code} seats={seats} />
+    return (
+      <>
+        <GuestWaiting code={code} seats={seats} onHelp={() => setShowHelp(true)} />
+        {showHelp && <HelpSheet onClose={() => setShowHelp(false)} />}
+      </>
+    )
   }
 
-  return <HostSide code={code} seats={seats} />
+  return (
+    <>
+      <HostSide code={code} seats={seats} />
+      {showHelp && <HelpSheet onClose={() => setShowHelp(false)} />}
+    </>
+  )
 }
 
 /** 客人的等候室：谁来了、还差几个、房号多少，都摆明白。 */
-function GuestWaiting({ code, seats }: { code: string | null; seats: RoomSeats }) {
+function GuestWaiting({
+  code,
+  seats,
+  onHelp,
+}: {
+  code: string | null
+  seats: RoomSeats
+  onHelp: () => void
+}) {
   const list = seats ?? []
   const aiLevel = useStore((s) => s.aiLevel)
   return (
@@ -109,6 +129,13 @@ function GuestWaiting({ code, seats }: { code: string | null; seats: RoomSeats }
         <div className="mt-3 flex items-center gap-2 text-[13px] text-muted">
           <span>AI 难度</span>
           <span className="chip">{['简单', '普通', '难'][aiLevel]}</span>
+          <button
+            className="btn btn-ghost btn-sm ml-auto"
+            onClick={onHelp}
+            data-testid="room-help"
+          >
+            玩法说明
+          </button>
         </div>
       </div>
     </div>

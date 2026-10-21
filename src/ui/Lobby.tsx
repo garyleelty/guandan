@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useStore } from '../state/store'
+import { HelpSheet } from './HelpSheet'
 import { createRoom, nick } from '../net/host'
 import { codeFromUrl } from '../net/room'
 import { RANK, buildDeck } from '../core/cards'
@@ -34,6 +35,7 @@ export function Lobby() {
   const startSolo = useStore((s) => s.startSolo)
   const mode = useStore((s) => s.mode)
   const aiLevel = useStore((s) => s.aiLevel)
+  const [showHelp, setShowHelp] = useState(false)
   const [nick_, setNick] = useState(nick())
   const deep = mode === 'guest' || codeFromUrl()
 
@@ -106,6 +108,13 @@ export function Lobby() {
             </button>
             <button
               className="btn btn-ghost min-h-11 w-full"
+              onClick={() => setShowHelp(true)}
+              data-testid="open-help"
+            >
+              玩法说明
+            </button>
+            <button
+              className="btn btn-ghost min-h-11 w-full"
               onClick={() => {
                 useStore.setState({ mode: 'guest', screen: 'room' })
               }}
@@ -133,6 +142,7 @@ export function Lobby() {
           </div>
         </div>
       </div>
+      {showHelp && <HelpSheet onClose={() => setShowHelp(false)} />}
     </div>
   )
 }
