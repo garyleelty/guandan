@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useStore } from '../state/store'
 import { HelpSheet } from './HelpSheet'
+import { loadStats, winRate, type RoundRecord } from '../core/stats'
 import { createRoom, nick } from '../net/host'
 import { codeFromUrl } from '../net/room'
 import { RANK, buildDeck } from '../core/cards'
@@ -36,8 +37,14 @@ export function Lobby() {
   const mode = useStore((s) => s.mode)
   const aiLevel = useStore((s) => s.aiLevel)
   const [showHelp, setShowHelp] = useState(false)
+  const [stats, setStats] = useState<RoundRecord[]>([])
   const [nick_, setNick] = useState(nick())
   const deep = mode === 'guest' || codeFromUrl()
+
+  // 战绩：从本机存的历史里读，回到大厅时刷新一次
+  useEffect(() => {
+    setStats(loadStats())
+  }, [screen])
 
   if (deep)
     return (
@@ -140,6 +147,30 @@ export function Lobby() {
               </p>
             ))}
           </div>
+
+          {stats.length > 0 && (
+            <>
+              <h2 className="mt-6 border-t border-rule pt-4 text-base text-ink">最近战绩</h2>
+              <p className="mt-1 text-[13px] text-muted">
+                共 {stats.length} 局 · 胜率 {Math.round((winRate(stats) ?? 0) * 100)}%
+              </p>
+              <div className="mt-2 space-y-1.5" data-testid="recent-stats">
+                {stats
+                  .slice(-5)
+                  .reverse()
+                  .map((r) => (
+                    <div key={r.at} className="flex items-baseline justify-between gap-2 text-[13px]">
+                      <span className={r.win ? 'text-accent' : 'text-muted'}>
+                        {r.win ? `胜 · +${r.delta} 级` : '负'}
+                      </span>
+                      <span className="num text-faint">
+                        {r.levels[0]} : {r.levels[1]}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
       {showHelp && <HelpSheet onClose={() => setShowHelp(false)} />}

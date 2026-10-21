@@ -111,7 +111,7 @@ export const useStore = create<Store>((set, get) => ({
 
 // 整场出牌记录在客户端攒：引擎每局重置 log，攒起来才能分享整场
 useStore.subscribe((state) => {
-  trackMatchLog(state.match)
+  trackMatchLog(state.match, state.mySeat)
 })
 
 

@@ -1,4 +1,5 @@
-import type { GameState } from './engine'
+import { teamOf, type GameState, type Seat } from './engine'
+import { recordRound } from './stats'
 
 type LogEntry = GameState['log'][number]
 
@@ -9,9 +10,10 @@ type LogEntry = GameState['log'][number]
  */
 let rounds: LogEntry[][] = []
 let lastHistoryLen = 0
+let lastRecordedHistory = 0
 
 /** 跟一次状态变化：历史局数变多，说明刚打完一局，把它的记录归档。 */
-export function trackMatchLog(st: GameState | null): void {
+export function trackMatchLog(st: GameState | null, mySeat: Seat = 0): void {
   if (!st) {
     resetMatchLog()
     return
@@ -20,6 +22,21 @@ export function trackMatchLog(st: GameState | null): void {
     // 换了一场新比赛
     rounds = []
     lastHistoryLen = st.history.length
+  }
+  // 一局打完就记一笔战绩
+  if (st.history.length > lastRecordedHistory) {
+    const h = st.history[st.history.length - 1]
+    if (h) {
+      const mine = teamOf(mySeat)
+      recordRound({
+        at: Date.now(),
+        win: h.winner === mine,
+        delta: h.winner === mine ? h.delta : 0,
+        levels: [st.levels.even, st.levels.odd],
+        names: st.players.map((p) => p.name),
+      })
+    }
+    lastRecordedHistory = st.history.length
   }
   if (st.history.length > lastHistoryLen) {
     if (st.log.length > 0) rounds.push(st.log)
@@ -36,4 +53,5 @@ export function archivedRounds(): LogEntry[][] {
 export function resetMatchLog(): void {
   rounds = []
   lastHistoryLen = 0
+  lastRecordedHistory = 0
 }

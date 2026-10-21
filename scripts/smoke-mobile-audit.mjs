@@ -54,6 +54,18 @@ for (let i = 0; i < 8; i++) {
 }
 results.push(JSON.parse(await check('牌桌')))
 
+// 选一张牌：动作区多一个「选牌预览」，看会不会挤爆
+// 注意：这段在模板字符串里，正则别用 \d（会被当成转义），用 [0-9]
+const pickCard = `(() => {
+  const btn = [...document.querySelectorAll('button[aria-label]')].find(b => b.getAttribute('aria-label')?.match(/^[shcd][0-9]+-[0-9]+$/))
+  if (btn) btn.click()
+})()`
+await p.eval(pickCard)
+await sleep(400)
+results.push(JSON.parse(await check('选牌预览')))
+await p.eval(pickCard)
+await sleep(300)
+
 await p.eval('document.querySelector("[data-testid=play-log]").click()')
 await sleep(500)
 results.push(JSON.parse(await check('牌谱')))

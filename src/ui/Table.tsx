@@ -437,6 +437,23 @@ export function Table() {
               {tribute?.step === 'return' ? '轮到你还牌' : '轮到你进贡'}
             </span>
           )}
+          {selCards.length > 0 && !isTribute && (
+            <span
+              className={[
+                'chip',
+                selCombo ? (table && !beats(selCombo, table.combo) ? 'text-faint' : 'text-accent') : 'text-faint',
+              ].join(' ')}
+              data-testid="sel-preview"
+            >
+              {selCombo
+                ? `${COMBO_LABEL[selCombo.type] ?? ''} ${selCombo.rank === 15 ? '级牌' : (RANK_LABEL[selCombo.rank] ?? '')}`
+                : '不成牌型'}
+              {selCombo && table
+                ? ` · ${beats(selCombo, table.combo) ? '压得住' : '压不住'}`
+                : ''}
+              {selCombo ? ` · ${selCards.length} 张` : ''}
+            </span>
+          )}
           {hint ? <span className="text-[13px] text-accent">{hint}</span> : null}
           {!hint && blockReason ? (
             <span className="text-[13px] text-muted" data-testid="block-reason">
