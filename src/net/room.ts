@@ -32,6 +32,8 @@ export type Msg =
       reconnected?: boolean
     }
   | { t: 'state'; state: SerializedState; seat: Seat }
+  /** 座位表变了（有人进出 / 加 AI / 踢人）：等候室要跟着更新 */
+  | { t: 'seats'; seats: { seat: Seat; name: string; kind: 'host' | 'guest' | 'ai' | 'empty' }[] }
   | { t: 'intent'; action: Action }
   | { t: 'start' }
   | { t: 'leave' }

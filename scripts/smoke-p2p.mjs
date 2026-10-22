@@ -40,6 +40,12 @@ for (let i = 0; i < 3; i++) {
   })()`)
   await sleep(300)
 }
+await sleep(600)
+// 房主加完 AI 后，客人的等候室座位表应该同步更新（不用等开局）
+const seatKeys = `JSON.stringify((window.__gdStore.getState().roomSeats ?? []).map(s => s.seat + ':' + s.name + ':' + s.kind))`
+const hostSeatsBeforeStart = await host.eval(seatKeys)
+const guestSeatsBeforeStart = await guest.eval(seatKeys)
+
 await host.eval('document.querySelector("[data-testid=host-start]").click()')
 await sleep(5000)
 
@@ -86,6 +92,9 @@ console.log(
       roomCreated: !!code,
       guestJoined: guestState.screen === 'room' && !!guestState.seats,
       started: hostGame.phase === 'playing' && guestGame.phase === 'playing',
+      seatsSynced: hostSeatsBeforeStart === guestSeatsBeforeStart,
+      hostSeatsBeforeStart: JSON.parse(hostSeatsBeforeStart),
+      guestSeatsBeforeStart: JSON.parse(guestSeatsBeforeStart),
       levelSynced: hostGame.handLevel === guestGame.handLevel,
       guestHandLevel: guestGame.handLevel,
       hostPlayed,

@@ -523,3 +523,13 @@
 - 真浏览器（scripts/smoke-replay.mjs）：第 1 局结算 → 刷新仍见结算与「再来一局」
   （hasRematch / hasSettlement 均 true）→ 续打第 2 局中途再刷新（archiveRounds=1）→
   打完分享，复盘页两个局数标签都在（第 1 局 +3 / 第 2 局 +1），链接 809 字符，0 console 错误。
+
+## S43 等候室座位表不同步（房主加 AI / 踢人客人看不到）done
+- 问题：客人的座位表只在进房时收到一次 welcome，之后房主加 AI、移除 AI、踢人、
+  别的客人离开，客人端都不更新——房主那边已经「AI 乙 / AI 丙」了，
+  客人等候室还显示「空位」，不知道自己到底在等什么。
+- 修法：协议加 `seats` 消息；房主把「刷新自己的座位表 + 给所有客人发一份」
+  收进 `hostSeatsChanged`，在加入、离开、掉线、踢人、加 AI、移除 AI 六处统一调用
+  （src/net/host.ts、src/net/room.ts）；客人收到后直接更新 `roomSeats`（src/net/guest.ts）。
+- 真浏览器（scripts/smoke-p2p.mjs 增加 `seatsSynced`）：房主补两个 AI 后，
+  客人等待室是 `2:AI 乙:ai / 3:AI 丙:ai`，与房主完全一致；开局与出牌同步不受影响。

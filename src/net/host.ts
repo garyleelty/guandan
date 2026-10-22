@@ -72,7 +72,7 @@ function hostHandle(conn: DataConnection, msg: Msg): void {
     if (seat) {
       r.seats[seat.seat] = { seat: seat.seat, kind: 'empty', name: '', connId: null }
       if (r.match) r.match.players[seat.seat]!.isBot = true
-      useStore.setState({ roomSeats: [...r.seats] })
+      hostSeatsChanged(r)
     }
     return
   }
@@ -135,8 +135,19 @@ function hostHandle(conn: DataConnection, msg: Msg): void {
     seats: r.seats.map((s) => ({ seat: s.seat, name: s.name, kind: s.kind })),
     reconnected,
   } satisfies Msg)
-  useStore.setState({ roomSeats: [...r.seats] })
+  hostSeatsChanged(r)
   if (r.match) broadcastState()
+}
+
+/** 房主侧刷新座位表，并把新座位表发给所有客人（否则客人的等候室一直停在进房那一刻）。 */
+function hostSeatsChanged(r: HostRoom): void {
+  useStore.setState({ roomSeats: [...r.seats] })
+  const seats = r.seats.map((s) => ({ seat: s.seat, name: s.name, kind: s.kind }))
+  for (const s of r.seats) {
+    if (s.kind !== 'guest' || !s.connId) continue
+    const conn = (r.peer.connections as Record<string, DataConnection[]>)[s.connId]?.[0]
+    conn?.send({ t: 'seats', seats } satisfies Msg)
+  }
 }
 
 function usedName(r: HostRoom, name: string): boolean {
@@ -164,7 +175,7 @@ function hostDrop(conn: DataConnection): void {
     const p = r.match.players[seat.seat]!
     p.isBot = true
   }
-  useStore.setState({ roomSeats: [...r.seats] })
+  hostSeatsChanged(r)
 }
 
 /** 房主请某位客人出房间。 */
@@ -187,14 +198,14 @@ export function hostAddAi(seat: Seat): void {
   const r = room
   if (!r || r.seats[seat]!.kind !== 'empty') return
   r.seats[seat] = { seat, name: `AI ${['甲', '乙', '丙'][seat - 1] ?? ''}`, kind: 'ai', connId: null }
-  useStore.setState({ roomSeats: [...r.seats] })
+  hostSeatsChanged(r)
 }
 
 export function hostRemoveAi(seat: Seat): void {
   const r = room
   if (!r || r.seats[seat]!.kind !== 'ai') return
   r.seats[seat] = { seat, kind: 'empty', name: '', connId: null }
-  useStore.setState({ roomSeats: [...r.seats] })
+  hostSeatsChanged(r)
 }
 
 export function hostStart(): void {

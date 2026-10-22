@@ -1140,6 +1140,33 @@
         }
       ],
       "status": "done"
+    },
+    {
+      "id": "S43",
+      "title": "等候室座位表不同步：房主加 AI / 踢人，客人看不到",
+      "criteria": [
+        {
+          "id": "S43-1",
+          "desc": "协议新增 seats 消息；房主在加入/离开/掉线/踢人/加 AI/移除 AI 后广播完整座位表",
+          "check": "cmd"
+        },
+        {
+          "id": "S43-2",
+          "desc": "客人收到 seats 后刷新等候室（不必等开局）",
+          "check": "cmd"
+        },
+        {
+          "id": "S43-3",
+          "desc": "真浏览器：房主加两个 AI 后，客人等候室的座位表与房主完全一致（修复前是空位）",
+          "check": "cmd"
+        },
+        {
+          "id": "S43-4",
+          "desc": "验收：169 tests + build + smoke-p2p 全过",
+          "check": "cmd"
+        }
+      ],
+      "status": "done"
     }
   ]
 }

@@ -82,6 +82,10 @@ function guestHandle(msg: Msg): void {
     useStore.setState({ match: st, mySeat: msg.seat, screen: 'table' })
     return
   }
+  if (msg.t === 'seats') {
+    useStore.setState({ roomSeats: msg.seats })
+    return
+  }
   if (msg.t === 'leave') {
     useStore.setState({ guestLost: true })
     return
