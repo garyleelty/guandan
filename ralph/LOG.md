@@ -498,3 +498,14 @@
 - P2P 冒烟（scripts/smoke-p2p.mjs）增加断言：`levelSynced` / `finalLevelSynced`
   （修复前客人 handLevel 是 undefined，这条会红）。
 - 验收：真浏览器双页 `levelSynced=true`、`guestHandLevel=2`、出牌仍同步、0 console 错误。
+
+## S41 观战者不该收到任何人的手牌 done
+- 发现：观战广播用的是 `serializeFor(match, 0)`，也就是把观战者当成 0 号座——
+  房主（座位 0）的**真实手牌**会随每一次 state 消息发到观战者浏览器里。
+  界面虽然不画手牌，但打开控制台就能看到房主打什么，等于让看牌的人偷看。
+- 修法（src/net/room.ts）：`serializeFor` 增加 `hideHands` 选项，四家手牌都用等长占位牌；
+  host 的观战 welcome 与后续 state 广播都传 `{ hideHands: true }`（src/net/host.ts）。
+- 单测（src/net/room.test.ts）：观战序列化后四家手牌全是 `hidden-*`，张数保持真实。
+- 真浏览器（scripts/smoke-spectator.mjs）：观战者 state 里 `handsHidden=true`、
+  `hostHand=["hidden-0","hidden-1"]`；仍收到 8 条出牌记录；没有手牌/出牌按钮；
+  手机端 390px 无横向溢出、0 console 错误。

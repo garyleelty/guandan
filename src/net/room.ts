@@ -65,9 +65,14 @@ const filler = (n: number): { id: string; rank: number; suit: number }[] =>
   Array.from({ length: n }, (_, i) => ({ id: `hidden-${i}`, rank: 0, suit: 0 }))
 
 /** 只向该座 disclose 自己的手牌，他人以等长占位牌替代（数量保持真实） */
-export function serializeFor(st: GameState, seat: Seat): SerializedState {
+export function serializeFor(
+  st: GameState,
+  seat: Seat,
+  opts?: { hideHands?: boolean },
+): SerializedState {
+  const hideHands = opts?.hideHands === true
   const players = st.players.map((p) =>
-    p.seat === seat
+    !hideHands && p.seat === seat
       ? { seat: p.seat, name: p.name, hand: p.hand, finishOrder: p.finishOrder }
       : { seat: p.seat, name: p.name, hand: filler(p.hand.length), finishOrder: p.finishOrder },
   )

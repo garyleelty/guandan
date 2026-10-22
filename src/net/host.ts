@@ -95,7 +95,8 @@ function hostHandle(conn: DataConnection, msg: Msg): void {
       reconnected: false,
     } satisfies Msg)
     if (r.match) {
-      conn.send({ t: 'state', state: serializeFor(r.match, 0), seat: 0 } satisfies Msg)
+      // 观战者不需要任何人的手牌：连房主的也不发，别把看牌变成偷看
+      conn.send({ t: 'state', state: serializeFor(r.match, 0, { hideHands: true }), seat: 0 } satisfies Msg)
     }
     return
   }
@@ -231,7 +232,7 @@ export function broadcastState(): void {
   }
   for (const sp of r.spectators) {
     const conn = (r.peer.connections as Record<string, DataConnection[]>)[sp.connId]?.[0]
-    conn?.send({ t: 'state', state: serializeFor(m, 0), seat: 0 } satisfies Msg)
+    conn?.send({ t: 'state', state: serializeFor(m, 0, { hideHands: true }), seat: 0 } satisfies Msg)
   }
 }
 

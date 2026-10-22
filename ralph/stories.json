@@ -1081,6 +1081,33 @@
         }
       ],
       "status": "done"
+    },
+    {
+      "id": "S41",
+      "title": "观战者不该收到任何人的手牌（包括房主）",
+      "criteria": [
+        {
+          "id": "S41-1",
+          "desc": "serializeFor 增加 hideHands 选项：四家手牌都用等长占位牌；观战的 welcome/state 广播改用它",
+          "check": "cmd"
+        },
+        {
+          "id": "S41-2",
+          "desc": "单测：观战序列化后四家手牌全是 hidden-*、张数仍真实",
+          "check": "cmd"
+        },
+        {
+          "id": "S41-3",
+          "desc": "真浏览器：观战者 state 里 handsHidden=true，没有手牌/出牌按钮，仍持续收到 log 更新",
+          "check": "cmd"
+        },
+        {
+          "id": "S41-4",
+          "desc": "验收：166 tests + build + smoke-spectator 全过",
+          "check": "cmd"
+        }
+      ],
+      "status": "done"
     }
   ]
 }

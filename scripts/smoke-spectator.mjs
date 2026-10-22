@@ -37,6 +37,12 @@ const watchInfo = await watcher.eval(`(() => {
     hasPlayButton: !!document.querySelector('[data-testid=btn-play]'),
     hasSeatLabels: body.includes('号位'),
     note: body.includes('正在观战'),
+    handsHidden: window.__gdStore.getState().match
+      ? window.__gdStore.getState().match.players.every(p => p.hand.every(c => c.id.startsWith('hidden-')))
+      : null,
+    hostHand: window.__gdStore.getState().match
+      ? window.__gdStore.getState().match.players[0].hand.slice(0, 2).map(c => c.id)
+      : [],
   })
 })()`)
 
