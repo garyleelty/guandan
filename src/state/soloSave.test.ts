@@ -28,7 +28,7 @@ describe('单机续局存档', () => {
 
   it('存进去能原样读回来（手牌、级数、难度）', () => {
     const match = newGame({ seed: 42, names, isBot: bots, aiLevel: 2 })
-    expect(saveSolo(match, 2, f.storage)).toBe(true)
+    expect(saveSolo(match, 2, [], f.storage)).toBe(true)
     const back = loadSolo(f.storage)
     expect(back).not.toBeNull()
     expect(back!.aiLevel).toBe(2)
@@ -38,11 +38,31 @@ describe('单机续局存档', () => {
     expect(back!.match.players.map((p) => p.name)).toEqual(names)
   })
 
-  it('已经结束的局不存', () => {
+  it('续局前已经打完的整场牌谱也存下来', () => {
+    const archive = [
+      [{ seat: 0 as const, ids: ['s3-0'], combo: { type: 0, rank: 3 } }],
+      [{ seat: 1 as const, ids: ['h4-0'], combo: { type: 0, rank: 4 } }],
+    ]
+    const match = newGame({ seed: 9, names, isBot: bots })
+    expect(saveSolo(match, 1, archive, f.storage)).toBe(true)
+    expect(loadSolo(f.storage)!.archive).toEqual(archive)
+  })
+
+  it('老存档没有 archive 字段时按空数组处理（还能续局）', () => {
+    const match = newGame({ seed: 1, names, isBot: bots })
+    f.mem.set(SOLO_SAVE_KEY, JSON.stringify({ v: 1, savedAt: 1, aiLevel: 1, mySeat: 0, match }))
+    const back = loadSolo(f.storage)
+    expect(back).not.toBeNull()
+    expect(back!.archive).toEqual([])
+  })
+
+  it('刚打完一局（结算页）也存，刷新还能看结算', () => {
     const match = newGame({ seed: 1, names, isBot: bots })
     match.phase = 'ended'
-    expect(saveSolo(match, 1, f.storage)).toBe(false)
-    expect(loadSolo(f.storage)).toBeNull()
+    expect(saveSolo(match, 1, [], f.storage)).toBe(true)
+    const back = loadSolo(f.storage)
+    expect(back).not.toBeNull()
+    expect(back!.match.phase).toBe('ended')
   })
 
   it('没存过就是 null', () => {
@@ -73,7 +93,7 @@ describe('单机续局存档', () => {
   })
 
   it('清掉之后读不到', () => {
-    saveSolo(newGame({ seed: 1, names, isBot: bots }), 1, f.storage)
+    saveSolo(newGame({ seed: 1, names, isBot: bots }), 1, [], f.storage)
     clearSolo(f.storage)
     expect(loadSolo(f.storage)).toBeNull()
   })
@@ -86,6 +106,6 @@ describe('单机续局存档', () => {
       },
       removeItem: () => {},
     }
-    expect(saveSolo(newGame(), 1, broken)).toBe(false)
+    expect(saveSolo(newGame(), 1, [], broken)).toBe(false)
   })
 })

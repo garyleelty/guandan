@@ -51,6 +51,17 @@ describe('整场出牌记录（客户端归档）', () => {
     trackMatchLog(stateWith(logB, 2)) // 这一局真的打完了
     expect(archivedRounds()).toHaveLength(1)
   })
+
+  it('续局能把存档里的前几局牌谱接回来，分享整场不丢', () => {
+    const resumed = stateWith(logB, 1)
+    primeMatchLog(resumed, [logA])
+    expect(archivedRounds()).toEqual([logA])
+    trackMatchLog(resumed)
+    expect(archivedRounds()).toHaveLength(1)
+    trackMatchLog(stateWith(logB, 2))
+    expect(archivedRounds()).toHaveLength(2)
+    expect(archivedRounds()[1]).toEqual(logB)
+  })
 })
 
 describe('复盘数据：整场（v2）', () => {

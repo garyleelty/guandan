@@ -108,7 +108,7 @@ export function Lobby() {
               className="btn btn-primary min-h-11 w-full"
               onClick={() => {
                 if (saved) {
-                  resumeSolo(saved.match, saved.aiLevel)
+                  resumeSolo(saved.match, saved.aiLevel, saved.archive)
                   setSaved(null)
                 } else {
                   startSolo()
@@ -117,7 +117,9 @@ export function Lobby() {
               data-testid={saved ? 'resume-solo' : 'solo'}
             >
               {saved
-                ? `继续上一局 · 第 ${saved.match.history.length + 1} 局（打 ${levelLabel(saved.match.handLevel)}）`
+                ? saved.match.phase === 'ended'
+                  ? `查看上一局结算（${saved.match.history.length} 局）`
+                  : `继续上一局 · 第 ${saved.match.history.length + 1} 局（打 ${levelLabel(saved.match.handLevel)}）`
                 : '单机开局（+3 AI）'}
             </button>
             {saved && (

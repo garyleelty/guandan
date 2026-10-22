@@ -41,7 +41,7 @@ export default function App() {
     // ?solo=1 直达牌桌（分享单机局 / 验收截图用）；有本机存档就接着打
     if (new URLSearchParams(window.location.search).get('solo') === '1' && useStore.getState().screen === 'lobby') {
       const saved = loadSolo()
-      if (saved) useStore.getState().resumeSolo(saved.match, saved.aiLevel)
+      if (saved) useStore.getState().resumeSolo(saved.match, saved.aiLevel, saved.archive)
       else useStore.getState().startSolo()
     }
   }, [])

@@ -16,6 +16,8 @@ export type SoloSave = {
   aiLevel: 0 | 1 | 2
   mySeat: Seat
   match: GameState
+  /** 续局前已经打完的那几局的出牌记录（分享整场复盘要用） */
+  archive: GameState['log'][]
 }
 
 type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
@@ -28,13 +30,14 @@ function defaultStorage(): StorageLike | null {
   }
 }
 
-/** 存一局。已结束的局不存（留着也没得续）。 */
+/** 存一局。刚打完一局（结算页）也存——刷新后还能看结算、接着开下一局。 */
 export function saveSolo(
   match: GameState,
   aiLevel: 0 | 1 | 2,
+  archive: GameState['log'][] = [],
   storage: StorageLike | null = defaultStorage(),
 ): boolean {
-  if (!storage || match.phase === 'ended') return false
+  if (!storage) return false
   try {
     const data: SoloSave = {
       v: VERSION,
@@ -42,6 +45,7 @@ export function saveSolo(
       aiLevel,
       mySeat: 0,
       match,
+      archive,
     }
     storage.setItem(SOLO_SAVE_KEY, JSON.stringify(data))
     return true
@@ -68,6 +72,7 @@ export function loadSolo(storage: StorageLike | null = defaultStorage()): SoloSa
       aiLevel: data.aiLevel,
       mySeat: 0,
       match: data.match,
+      archive: isArchive(data.archive) ? data.archive : [],
     }
   } catch {
     // 坏档留着只会每次启动都解析失败，直接清掉
@@ -94,10 +99,23 @@ function isCard(v: unknown): boolean {
   return typeof c.id === 'string' && Number.isInteger(c.rank) && Number.isInteger(c.suit)
 }
 
+function isLogEntry(v: unknown): boolean {
+  if (!v || typeof v !== 'object') return false
+  const e = v as { seat?: unknown; ids?: unknown; combo?: unknown }
+  if (!Number.isInteger(e.seat) || !Array.isArray(e.ids)) return false
+  if (!e.ids.every((id) => typeof id === 'string')) return false
+  if (e.combo !== null && (!e.combo || typeof e.combo !== 'object')) return false
+  return true
+}
+
+function isArchive(v: unknown): v is GameState['log'][] {
+  return Array.isArray(v) && v.every((round) => Array.isArray(round) && round.every(isLogEntry))
+}
+
 function isMatch(v: unknown): v is GameState {
   if (!v || typeof v !== 'object') return false
   const m = v as Partial<GameState>
-  if (m.phase !== 'playing' && m.phase !== 'tribute') return false
+  if (m.phase !== 'playing' && m.phase !== 'tribute' && m.phase !== 'ended') return false
   if (!m.levels || !Number.isInteger(m.levels.even) || !Number.isInteger(m.levels.odd)) return false
   if (typeof m.handLevel !== 'number' || !Number.isInteger(m.handLevel)) return false
   if (typeof m.turn !== 'number' || !Number.isInteger(m.turn)) return false

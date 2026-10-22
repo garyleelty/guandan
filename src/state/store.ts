@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { primeMatchLog, trackMatchLog } from '../core/matchlog'
+import { archivedRounds, primeMatchLog, trackMatchLog } from '../core/matchlog'
 import { nextRound, step } from '../core/engine'
 import type { Action, GameState, Seat } from '../core/engine'
 import { clearSolo, saveSolo } from './soloSave'
@@ -42,8 +42,8 @@ interface Store {
   teardown: (() => void) | null
   rematchSink: (() => void) | null
   startSolo: () => void
-  /** 从本机存档恢复单机牌局 */
-  resumeSolo: (match: GameState, aiLevel: 0 | 1 | 2) => void
+  /** 从本机存档恢复单机牌局（连带续局前的整场牌谱） */
+  resumeSolo: (match: GameState, aiLevel: 0 | 1 | 2, archive?: GameState['log'][]) => void
   dispatch: (a: Action) => void
   rematch: () => void
   backToLobby: () => void
@@ -78,11 +78,11 @@ export const useStore = create<Store>((set, get) => ({
       aiLevel,
     })
     set({ screen: 'table', mode: 'solo', mySeat: 0, match })
-    saveSolo(match, aiLevel)
+    saveSolo(match, aiLevel, archivedRounds())
   },
-  resumeSolo: (match, aiLevel) => {
-    // 续局：先把归档水位对齐，避免把历史里的局再记一遍战绩
-    primeMatchLog(match)
+  resumeSolo: (match, aiLevel, archive = []) => {
+    // 续局：接回已打完的牌谱，并把归档水位对齐，避免把历史里的局再记一遍战绩
+    primeMatchLog(match, archive)
     set({ screen: 'table', mode: 'solo', mySeat: 0, match, aiLevel })
   },
   dispatch: (a) => {
@@ -96,8 +96,8 @@ export const useStore = create<Store>((set, get) => ({
     if (next === match) return
     set({ match: next })
     if (mode === 'solo') {
-      if (next.phase === 'ended') clearSolo()
-      else saveSolo(next, get().aiLevel)
+      // 结算页也存：刷新不该把刚打完的一局连同整场一起弄丢
+      saveSolo(next, get().aiLevel, archivedRounds())
     }
     get().afterDispatch?.()
   },

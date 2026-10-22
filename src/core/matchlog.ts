@@ -50,14 +50,14 @@ export function archivedRounds(): LogEntry[][] {
 }
 
 /**
- * 从存档续局：把「已经记过账」的水位对齐到当前历史局数。
+ * 从存档续局：把「已经记过账」的水位对齐到当前历史局数，并把存档里的
+ * 前几局牌谱接回来（不然刷新后续局，分享链接只剩当前这一局）。
  *
- * 不这么做的话，续局后的第一次状态变化会把历史里的每一局都当成刚打完，
+ * 不这么对齐的话，续局后的第一次状态变化会把历史里的每一局都当成刚打完，
  * 战绩会重复记一遍（而且每次刷新续局都会再多记一遍）。
- * 代价是：续局前那几局的出牌记录没有归档，分享链接只从续局这一局开始。
  */
-export function primeMatchLog(st: GameState | null): void {
-  rounds = []
+export function primeMatchLog(st: GameState | null, archive: LogEntry[][] = []): void {
+  rounds = archive.map((r) => [...r])
   lastHistoryLen = st?.history.length ?? 0
   lastRecordedHistory = st?.history.length ?? 0
 }
