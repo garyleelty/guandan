@@ -41,6 +41,10 @@ export type Msg =
 export interface SerializedState {
   phase: GameState['phase']
   levels: GameState['levels']
+  /** 本局级数：客人也要靠它算级牌、逢人配、手牌排序 */
+  handLevel: GameState['handLevel']
+  /** 上一局下游那队：结算页要据此说明「本局赢不了整场」 */
+  dwellerTeam: GameState['dwellerTeam']
   matchWinner: GameState['matchWinner']
   players: { seat: Seat; name: string; hand: { id: string; rank: number; suit: number }[]; finishOrder: number | null }[]
   turn: Seat
@@ -70,6 +74,8 @@ export function serializeFor(st: GameState, seat: Seat): SerializedState {
   return {
     phase: st.phase,
     levels: st.levels,
+    handLevel: st.handLevel,
+    dwellerTeam: st.dwellerTeam,
     matchWinner: st.matchWinner,
     players: players as SerializedState['players'],
     turn: st.turn,

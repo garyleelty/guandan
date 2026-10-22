@@ -485,3 +485,16 @@
 - 真浏览器（scripts/smoke-resume.mjs）：出一张 → 等 AI 接完 → 刷新 →
   大厅出现「继续上一局 · 第 1 局（打 2）」→ 点开 log / 四家手牌 / 级数全一致；
   `?solo=1` 同样续档；回大厅后存档清掉、不再出现续局按钮；0 console 错误。
+
+## S40 联机状态漏传本局级数与下游队标记 done
+- 查序列化时发现 `SerializedState` 少了两个字段：`handLevel`（本局级数）和
+  `dwellerTeam`（上一局下游那队）。房主用 `serializeFor` 发给客人的状态里没有它们，
+  客人拿到的 `match` 里这两个值是 `undefined`。
+- 后果：客人的牌桌算不出级牌——手牌没有「级 / 配」角标、理牌和选牌预览不知道哪张是级牌、
+  红桃级牌不能当逢人配凑牌型；结算页也永远不显示「上一局的下游那队，本局赢不了整场」。
+  单机没有这个问题，只有联机客人。
+- 修法（src/net/room.ts）：接口与 `serializeFor` 都补上 `handLevel` / `dwellerTeam`。
+  顺手加 `src/net/room.test.ts` 三条：字段过 JSON 仍在、只公开自己的手牌、别家只给数量。
+- P2P 冒烟（scripts/smoke-p2p.mjs）增加断言：`levelSynced` / `finalLevelSynced`
+  （修复前客人 handLevel 是 undefined，这条会红）。
+- 验收：真浏览器双页 `levelSynced=true`、`guestHandLevel=2`、出牌仍同步、0 console 错误。

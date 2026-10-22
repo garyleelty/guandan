@@ -1054,6 +1054,33 @@
         }
       ],
       "status": "done"
+    },
+    {
+      "id": "S40",
+      "title": "联机状态漏传本局级数与下游队标记（客人看不到级牌/逢人配）",
+      "criteria": [
+        {
+          "id": "S40-1",
+          "desc": "SerializedState / serializeFor 补上 handLevel 与 dwellerTeam（GameState 其余字段都已传）",
+          "check": "cmd"
+        },
+        {
+          "id": "S40-2",
+          "desc": "单测：字段经 JSON 传输仍在；仍然只公开自己的手牌，别家只给数量",
+          "check": "cmd"
+        },
+        {
+          "id": "S40-3",
+          "desc": "P2P 冒烟：房主与客人的 handLevel 一致（修复前客人是 undefined），出牌同步不变",
+          "check": "cmd"
+        },
+        {
+          "id": "S40-4",
+          "desc": "验收：165 tests + build + smoke-p2p 全过",
+          "check": "cmd"
+        }
+      ],
+      "status": "done"
     }
   ]
 }

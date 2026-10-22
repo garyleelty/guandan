@@ -8,7 +8,7 @@ const b = await Browser.launch({ width: 1440, height: 900 })
 const host = await b.newPage({ width: 1440, height: 900 })
 const guest = await b.newPage({ width: 1440, height: 900 })
 
-const st = (p) => p.eval('JSON.stringify(window.__gdStore.getState().match ? { screen: window.__gdStore.getState().screen, code: window.__gdStore.getState().roomCode, seats: window.__gdStore.getState().roomSeats, phase: window.__gdStore.getState().match.phase, log: window.__gdStore.getState().match.log.length, hand: window.__gdStore.getState().match.players.map(p => p.hand.length) } : { screen: window.__gdStore.getState().screen, code: window.__gdStore.getState().roomCode, seats: window.__gdStore.getState().roomSeats })')
+const st = (p) => p.eval('JSON.stringify(window.__gdStore.getState().match ? { screen: window.__gdStore.getState().screen, code: window.__gdStore.getState().roomCode, seats: window.__gdStore.getState().roomSeats, phase: window.__gdStore.getState().match.phase, log: window.__gdStore.getState().match.log.length, handLevel: window.__gdStore.getState().match.handLevel, dweller: window.__gdStore.getState().match.dwellerTeam, hand: window.__gdStore.getState().match.players.map(p => p.hand.length) } : { screen: window.__gdStore.getState().screen, code: window.__gdStore.getState().roomCode, seats: window.__gdStore.getState().roomSeats })')
 
 // 1) 房主建房
 await host.goto('http://localhost:5173/')
@@ -86,6 +86,8 @@ console.log(
       roomCreated: !!code,
       guestJoined: guestState.screen === 'room' && !!guestState.seats,
       started: hostGame.phase === 'playing' && guestGame.phase === 'playing',
+      levelSynced: hostGame.handLevel === guestGame.handLevel,
+      guestHandLevel: guestGame.handLevel,
       hostPlayed,
       guestSawTrick,
       guestTrickSeat,
@@ -93,6 +95,7 @@ console.log(
       guestPlayed,
       hostLog: hostFinal.log,
       guestLog: guestFinal.log,
+      finalLevelSynced: hostFinal.handLevel === guestFinal.handLevel,
       hostHands: hostFinal.hand,
       guestHands: guestFinal.hand,
       hostErrors: host.consoleErrors,
