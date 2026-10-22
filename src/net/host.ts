@@ -23,6 +23,8 @@ export interface HostRoom {
   usedNames: Set<string>
   /** 观战的人：只看牌，不上桌 */
   spectators: { connId: string; name: string }[]
+  /** 被房主请出过的人（按 token）：请出去就别再进来 */
+  banned: Set<string>
 }
 
 let room: HostRoom | null = null
@@ -45,7 +47,7 @@ export function createRoom(): void {
   const seats = initialSeats()
   const usedNames = new Set<string>([seats[0]!.name])
   const peer = new Peer(peerIdOf(code))
-  room = { code, peer, seats, match: null, usedNames, spectators: [] }
+  room = { code, peer, seats, match: null, usedNames, spectators: [], banned: new Set() }
   ;(window as unknown as Record<string, unknown>).__gdHost = room
 
   peer.on('open', () => {
@@ -99,6 +101,12 @@ function hostHandle(conn: DataConnection, msg: Msg): void {
   }
   // 认领原座：同一个 token 再来（刷新页面、断线重连）就还是那个座位
   const token = msg.token
+  // 被房主请出过的人就别再进来了：说清楚原因，别让他以为只是掉线
+  if (token && r.banned.has(token)) {
+    conn.send({ t: 'kick', seat: 1, reason: '房主已把你请出这个房间' } satisfies Msg)
+    conn.close()
+    return
+  }
   // 房主座位没有 token；客人座位断线后会变空位/AI，但 token 留着，好让重连认领
   const mine = token ? r.seats.find((s) => s.token === token) : undefined
   let name = (msg.name || '玩家').slice(0, 8)
@@ -166,6 +174,8 @@ export function hostKick(seat: Seat): void {
   if (!s || s.kind !== 'guest' || !s.connId) return
   const conn = (r.peer.connections as Record<string, DataConnection[]>)[s.connId]?.[0]
   conn?.send({ t: 'kick', seat, reason: '你已被房主请出房间' } satisfies Msg)
+  // 请出去了就别再进来：记下这个人的本机 token
+  if (s.token) r.banned.add(s.token)
   r.seats[seat] = { seat, kind: 'empty', name: '', connId: null }
   if (r.match) r.match.players[seat]!.isBot = true
   useStore.setState({ roomSeats: [...r.seats] })

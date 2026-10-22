@@ -454,3 +454,16 @@
   修好后为 true。
 - 验收：151 tests 全绿；40 场压力跑 0 问题；九条真浏览器冒烟全过；
   inspect 0 FAIL 0 WARN，lint 0 FAIL，oxlint 0 warning。
+
+## S38 被移出的客人不能凭原链接重回房间 done
+- 之前房主「移出」只是把座位清空、断开连接；被移出的人再点一次原链接就能坐回来，
+  踢人等于没踢。
+- 修法：房主按下「移出」时把该客人的本机 token 记进房间的 `banned`；
+  同一个 token 再来握手直接回一条 `kick`（带原因）后断开。
+- 客人侧提示不再自相矛盾：原来写「或等房主再拉你」，但 token 已被拒，拉也拉不进来；
+  改成「这个房间暂时不能再进；可以回大厅自己开一局，或让房主换新房号再拉你」，
+  同时这种情况下不显示「重新连接」按钮。
+- 冒烟脚本（scripts/smoke-kick.mjs）补了重进断言：`rejoinBlocked`、`rejoinKicked`、
+  房主四座仍是空的；并把固定 sleep 改成轮询，PeerJS 握手慢的时候不再误判。
+- 验收：151 tests 全绿；`bun run build` 零错；smoke-kick 输出
+  rejoinBlocked=true / rejoinKicked=「房主已把你请出这个房间」/ 座位空出 / 两边 0 console 错误。

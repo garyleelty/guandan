@@ -26,7 +26,7 @@ export function RoomView() {
             <h2 className="text-base font-semibold text-ink">{kicked || '连接断开'}</h2>
             <p className="mt-2 text-sm text-muted">
               {kicked
-                ? '你可以回大厅重新开一局，或等房主再拉你。'
+                ? '这个房间暂时不能再进。你可以回大厅自己开一局，或让房主换新房号再拉你。'
                 : '和房主的连接断了。房主还在的话，你的座位会暂时由 AI 接手；重新连上就还给你。'}
             </p>
             <div className="mt-4 flex gap-2">
