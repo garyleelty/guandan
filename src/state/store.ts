@@ -1,7 +1,8 @@
 import { create } from 'zustand'
-import { trackMatchLog } from '../core/matchlog'
+import { primeMatchLog, trackMatchLog } from '../core/matchlog'
 import { nextRound, step } from '../core/engine'
 import type { Action, GameState, Seat } from '../core/engine'
+import { clearSolo, saveSolo } from './soloSave'
 
 export type Screen = 'lobby' | 'room' | 'table'
 export type Mode = 'solo' | 'host' | 'guest'
@@ -41,6 +42,8 @@ interface Store {
   teardown: (() => void) | null
   rematchSink: (() => void) | null
   startSolo: () => void
+  /** 从本机存档恢复单机牌局 */
+  resumeSolo: (match: GameState, aiLevel: 0 | 1 | 2) => void
   dispatch: (a: Action) => void
   rematch: () => void
   backToLobby: () => void
@@ -67,13 +70,20 @@ export const useStore = create<Store>((set, get) => ({
   rematchSink: null,
   startSolo: () => {
     // 整场没结束 → 下一局先走进贡（交贡 → 还牌 → 下游领出）；否则开新的一场
+    const aiLevel = get().aiLevel
     const match = nextRound(get().match, {
       seed: Math.floor(Math.random() * 1e9),
       names: ['你', 'AI 甲', 'AI 乙', 'AI 丙'],
       isBot: [false, true, true, true],
-      aiLevel: get().aiLevel,
+      aiLevel,
     })
     set({ screen: 'table', mode: 'solo', mySeat: 0, match })
+    saveSolo(match, aiLevel)
+  },
+  resumeSolo: (match, aiLevel) => {
+    // 续局：先把归档水位对齐，避免把历史里的局再记一遍战绩
+    primeMatchLog(match)
+    set({ screen: 'table', mode: 'solo', mySeat: 0, match, aiLevel })
   },
   dispatch: (a) => {
     const { mode, match } = get()
@@ -85,6 +95,10 @@ export const useStore = create<Store>((set, get) => ({
     const next = step(match, a)
     if (next === match) return
     set({ match: next })
+    if (mode === 'solo') {
+      if (next.phase === 'ended') clearSolo()
+      else saveSolo(next, get().aiLevel)
+    }
     get().afterDispatch?.()
   },
   rematch: () => {
@@ -94,6 +108,7 @@ export const useStore = create<Store>((set, get) => ({
   },
   backToLobby: () => {
     get().teardown?.()
+    clearSolo()
     set({
       screen: 'lobby',
       match: null,

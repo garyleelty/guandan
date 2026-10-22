@@ -1022,6 +1022,38 @@
         }
       ],
       "status": "done"
+    },
+    {
+      "id": "S39",
+      "title": "单机续局：刷新页面不丢牌局",
+      "criteria": [
+        {
+          "id": "S39-1",
+          "desc": "单机每次出牌/过牌自动存档（含进贡阶段），结束或回大厅清档；读档前校验形状，坏档丢弃",
+          "check": "cmd"
+        },
+        {
+          "id": "S39-2",
+          "desc": "大厅显示「继续上一局 · 第 N 局（打 X）」，点开恢复手牌/级数/出牌记录/AI 难度",
+          "check": "cmd"
+        },
+        {
+          "id": "S39-3",
+          "desc": "续局不会把历史里的局重复记战绩（primeMatchLog 对齐归档水位）",
+          "check": "cmd"
+        },
+        {
+          "id": "S39-4",
+          "desc": "?solo=1 直达牌桌时也优先续档；真浏览器 smoke-resume 验证刷新前后状态一致",
+          "check": "cmd"
+        },
+        {
+          "id": "S39-5",
+          "desc": "验收：162 tests + build + smoke-resume 全过",
+          "check": "cmd"
+        }
+      ],
+      "status": "done"
     }
   ]
 }

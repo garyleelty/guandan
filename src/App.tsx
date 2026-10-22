@@ -5,6 +5,7 @@ import { Table } from './ui/Table'
 import { RoomView } from './ui/RoomView'
 import { aiMove, aiTributeMove } from './core/ai'
 import { joinRoom } from './net/guest'
+import { loadSolo } from './state/soloSave'
 import { decodeReplay, encodeReplay, replayFromState, type ReplayData } from './core/replay'
 import { ReplayView } from './ui/ReplayView'
 import { codeFromUrl } from './net/room'
@@ -37,9 +38,11 @@ export default function App() {
       joinRoom(r, { watch })
       return
     }
-    // ?solo=1 直达牌桌（分享单机局 / 验收截图用）
+    // ?solo=1 直达牌桌（分享单机局 / 验收截图用）；有本机存档就接着打
     if (new URLSearchParams(window.location.search).get('solo') === '1' && useStore.getState().screen === 'lobby') {
-      useStore.getState().startSolo()
+      const saved = loadSolo()
+      if (saved) useStore.getState().resumeSolo(saved.match, saved.aiLevel)
+      else useStore.getState().startSolo()
     }
   }, [])
 

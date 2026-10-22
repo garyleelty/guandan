@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { archivedRounds, resetMatchLog, trackMatchLog } from './matchlog'
+import { archivedRounds, primeMatchLog, resetMatchLog, trackMatchLog } from './matchlog'
 import { decodeReplay, encodeReplay, replayFromState } from './replay'
 import { newGame } from './engine'
 import type { GameState } from './engine'
@@ -40,6 +40,16 @@ describe('整场出牌记录（客户端归档）', () => {
     trackMatchLog(stateWith(logA, 1))
     trackMatchLog(stateWith([], 0)) // 新比赛
     expect(archivedRounds()).toHaveLength(0)
+  })
+
+  it('从存档续局不会把历史局当新打完的（不重复归档）', () => {
+    const resumed = stateWith(logB, 1)
+    primeMatchLog(resumed)
+    trackMatchLog(resumed) // 续局后的第一次状态变化
+    expect(archivedRounds()).toHaveLength(0)
+
+    trackMatchLog(stateWith(logB, 2)) // 这一局真的打完了
+    expect(archivedRounds()).toHaveLength(1)
   })
 })
 

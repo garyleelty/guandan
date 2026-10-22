@@ -4,7 +4,8 @@ import { HelpSheet } from './HelpSheet'
 import { loadStats, winRate, type RoundRecord } from '../core/stats'
 import { createRoom, nick } from '../net/host'
 import { codeFromUrl } from '../net/room'
-import { RANK, buildDeck } from '../core/cards'
+import { RANK, buildDeck, levelLabel } from '../core/cards'
+import { loadSolo, type SoloSave } from '../state/soloSave'
 import { CardFace } from './CardFace'
 import { Mark } from './Mark'
 
@@ -34,10 +35,12 @@ const AI_LEVELS: { v: 0 | 1 | 2; label: string; hint: string }[] = [
 
 export function Lobby() {
   const startSolo = useStore((s) => s.startSolo)
+  const resumeSolo = useStore((s) => s.resumeSolo)
   const mode = useStore((s) => s.mode)
   const aiLevel = useStore((s) => s.aiLevel)
   const [showHelp, setShowHelp] = useState(false)
   const [stats, setStats] = useState<RoundRecord[]>([])
+  const [saved, setSaved] = useState<SoloSave | null>(() => loadSolo())
   const [nick_, setNick] = useState(nick())
   const deep = mode === 'guest' || codeFromUrl()
 
@@ -101,9 +104,31 @@ export function Lobby() {
           </div>
 
           <div className="mt-6 space-y-2">
-            <button className="btn btn-primary min-h-11 w-full" onClick={startSolo} data-testid="solo">
-              单机开局（+3 AI）
+            <button
+              className="btn btn-primary min-h-11 w-full"
+              onClick={() => {
+                if (saved) {
+                  resumeSolo(saved.match, saved.aiLevel)
+                  setSaved(null)
+                } else {
+                  startSolo()
+                }
+              }}
+              data-testid={saved ? 'resume-solo' : 'solo'}
+            >
+              {saved
+                ? `继续上一局 · 第 ${saved.match.history.length + 1} 局（打 ${levelLabel(saved.match.handLevel)}）`
+                : '单机开局（+3 AI）'}
             </button>
+            {saved && (
+              <button
+                className="btn btn-secondary min-h-11 w-full"
+                onClick={startSolo}
+                data-testid="solo"
+              >
+                新开一局（+3 AI）
+              </button>
+            )}
             <button
               className="btn btn-secondary min-h-11 w-full"
               onClick={() => {

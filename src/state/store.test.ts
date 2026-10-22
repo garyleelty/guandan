@@ -1,6 +1,24 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { newGame } from '../core/engine'
+import { loadSolo } from './soloSave'
 import { useStore } from './store'
+
+// node 环境没有 localStorage，垫一个（续局存档要用）
+const mem = new Map<string, string>()
+Object.defineProperty(globalThis, 'localStorage', {
+  configurable: true,
+  value: {
+    getItem: (k: string) => mem.get(k) ?? null,
+    setItem: (k: string, v: string) => void mem.set(k, v),
+    removeItem: (k: string) => void mem.delete(k),
+    clear: () => mem.clear(),
+  },
+})
+
+beforeEach(() => {
+  mem.clear()
+  useStore.setState({ match: null, screen: 'lobby', mode: 'solo', aiLevel: 1 })
+})
 
 /** 造一个「上一局刚打完、整场还没结束」的状态 */
 function finishedRound() {
@@ -41,5 +59,27 @@ describe('单机开局（startSolo）', () => {
     const m = useStore.getState().match!
     expect(m.phase).toBe('playing')
     expect(m.levels).toEqual({ even: 2, odd: 2 })
+  })
+})
+
+describe('单机续局', () => {
+  it('开局即存档，回大厅就清掉', () => {
+    useStore.getState().startSolo()
+    const save = loadSolo()
+    expect(save).not.toBeNull()
+    expect(save!.match.players[0]!.hand).toEqual(useStore.getState().match!.players[0]!.hand)
+
+    useStore.getState().backToLobby()
+    expect(loadSolo()).toBeNull()
+  })
+
+  it('resumeSolo 恢复牌局、难度和牌桌界面', () => {
+    const match = newGame({ seed: 7, names: ['你', 'AI 甲', 'AI 乙', 'AI 丙'], isBot: [false, true, true, true] })
+    useStore.getState().resumeSolo(match, 2)
+    const s = useStore.getState()
+    expect(s.screen).toBe('table')
+    expect(s.mode).toBe('solo')
+    expect(s.match).toBe(match)
+    expect(s.aiLevel).toBe(2)
   })
 })
