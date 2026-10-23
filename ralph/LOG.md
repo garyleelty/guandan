@@ -533,3 +533,15 @@
   （src/net/host.ts、src/net/room.ts）；客人收到后直接更新 `roomSeats`（src/net/guest.ts）。
 - 真浏览器（scripts/smoke-p2p.mjs 增加 `seatsSynced`）：房主补两个 AI 后，
   客人等待室是 `2:AI 乙:ai / 3:AI 丙:ai`，与房主完全一致；开局与出牌同步不受影响。
+
+## S44 房主改 AI 难度，客人等候室看到的还是旧难度 done
+- 问题：客人等候室的「AI 难度」读的是客人自己的 `aiLevel`（默认普通），
+  房主把难度改成「难」也不会告诉客人——两个人看同一间房，显示的难度不一样。
+- 修法：`seats` 消息带上房主当前 `aiLevel`；房主改难度走新的 `hostSetAiLevel`
+  （写 store + 广播座位表），客人存进 `roomAiLevel`，等候室优先显示它；
+  进房与回大厅时重置为 null（src/net/room.ts、src/net/host.ts、src/net/guest.ts、
+  src/state/store.ts、src/ui/RoomView.tsx）。
+- 真浏览器（scripts/smoke-p2p.mjs 增加 `aiLevelSynced`）：房主点「难」后
+  `guestRoomAi=2`，客人等候室文本含「难」；座位表仍同步，开局/出牌同步不受影响。
+- 顺手把 smoke-p2p 的固定 sleep 改成 waitFor，并给客人进房加了「握手慢就重连一次」，
+  这台机器上 PeerJS 偶发 15 秒连不上，之前会把「没进来」当成「进来了」继续跑。

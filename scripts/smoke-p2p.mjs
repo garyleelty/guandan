@@ -8,22 +8,56 @@ const b = await Browser.launch({ width: 1440, height: 900 })
 const host = await b.newPage({ width: 1440, height: 900 })
 const guest = await b.newPage({ width: 1440, height: 900 })
 
+async function waitFor(page, expr, timeoutMs = 15000) {
+  const end = Date.now() + timeoutMs
+  while (Date.now() < end) {
+    if (await page.eval(expr)) return true
+    await sleep(200)
+  }
+  return false
+}
+
 const st = (p) => p.eval('JSON.stringify(window.__gdStore.getState().match ? { screen: window.__gdStore.getState().screen, code: window.__gdStore.getState().roomCode, seats: window.__gdStore.getState().roomSeats, phase: window.__gdStore.getState().match.phase, log: window.__gdStore.getState().match.log.length, handLevel: window.__gdStore.getState().match.handLevel, dweller: window.__gdStore.getState().match.dwellerTeam, hand: window.__gdStore.getState().match.players.map(p => p.hand.length) } : { screen: window.__gdStore.getState().screen, code: window.__gdStore.getState().roomCode, seats: window.__gdStore.getState().roomSeats })')
 
 // 1) 房主建房
 await host.goto('http://localhost:5173/')
-await sleep(600)
+await waitFor(host, 'document.querySelector("[data-testid=create-room]") !== null')
 await host.eval('document.querySelector("[data-testid=create-room]").click()')
-await sleep(4000)
+await waitFor(host, 'window.__gdStore.getState().roomCode !== null')
 const hostState = JSON.parse(await st(host))
 const code = hostState.code
 console.log('room code:', code)
 
 // 2) 客人用链接进房
 await guest.goto(`http://localhost:5173/?r=${code}`)
-await sleep(5000)
+let joined = await waitFor(
+  guest,
+  'window.__gdStore.getState().roomSeats !== null && !window.__gdStore.getState().joining',
+  25000,
+)
+if (!joined) {
+  // PeerJS 握手偶发慢：再重连一次，别把「没进来」当成「进来了」
+  await guest.goto(`http://localhost:5173/?r=${code}`)
+  joined = await waitFor(
+    guest,
+    'window.__gdStore.getState().roomSeats !== null && !window.__gdStore.getState().joining',
+    25000,
+  )
+}
+if (!joined) {
+  console.log('guest did not join; body:', await guest.eval('document.body.innerText.slice(0, 200)'))
+  throw new Error('guest did not join')
+}
 const guestState = JSON.parse(await st(guest))
 console.log('guest screen:', guestState.screen, 'seats:', JSON.stringify(guestState.seats))
+
+// 房主改 AI 难度：客人等候室应立刻显示同一个
+await waitFor(host, 'document.querySelector("[data-testid=room-ai-level-2]") !== null')
+await host.eval('document.querySelector("[data-testid=room-ai-level-2]").click()')
+await sleep(700)
+const guestRoomAi = await guest.eval('window.__gdStore.getState().roomAiLevel')
+const guestRoomText = await guest.eval('document.body.innerText')
+const aiLevelSynced = guestRoomAi === 2 && guestRoomText.includes('难')
 
 // 3) 房主给空位加 AI → 开局
 await host.eval(`(() => {
@@ -46,8 +80,10 @@ const seatKeys = `JSON.stringify((window.__gdStore.getState().roomSeats ?? []).m
 const hostSeatsBeforeStart = await host.eval(seatKeys)
 const guestSeatsBeforeStart = await guest.eval(seatKeys)
 
+await waitFor(host, 'document.querySelector("[data-testid=host-start]").disabled === false')
 await host.eval('document.querySelector("[data-testid=host-start]").click()')
-await sleep(5000)
+await waitFor(host, `window.__gdStore.getState().screen === 'table'`, 15000)
+await waitFor(guest, `window.__gdStore.getState().screen === 'table'`, 15000)
 
 const hostGame = JSON.parse(await st(host))
 const guestGame = JSON.parse(await st(guest))
@@ -93,6 +129,8 @@ console.log(
       guestJoined: guestState.screen === 'room' && !!guestState.seats,
       started: hostGame.phase === 'playing' && guestGame.phase === 'playing',
       seatsSynced: hostSeatsBeforeStart === guestSeatsBeforeStart,
+      aiLevelSynced,
+      guestRoomAi,
       hostSeatsBeforeStart: JSON.parse(hostSeatsBeforeStart),
       guestSeatsBeforeStart: JSON.parse(guestSeatsBeforeStart),
       levelSynced: hostGame.handLevel === guestGame.handLevel,

@@ -23,6 +23,8 @@ interface Store {
   mode: Mode
   /** AI 难度：0 简单 / 1 普通 / 2 难 */
   aiLevel: 0 | 1 | 2
+  /** 客人等候室看到的房主难度（null = 还没从房主那儿收到） */
+  roomAiLevel: 0 | 1 | 2 | null
   match: GameState | null
   mySeat: Seat
   roomCode: string | null
@@ -54,6 +56,7 @@ export const useStore = create<Store>((set, get) => ({
   screen: 'lobby',
   mode: 'solo',
   aiLevel: 1,
+  roomAiLevel: null,
   match: null,
   mySeat: 0,
   roomCode: null,
@@ -114,7 +117,8 @@ export const useStore = create<Store>((set, get) => ({
       match: null,
       roomCode: null,
       roomSeats: null,
-  roomWatchers: [],
+      roomAiLevel: null,
+      roomWatchers: [],
       joining: false,
       guestLost: false,
       intentSink: null,

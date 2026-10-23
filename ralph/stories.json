@@ -1167,6 +1167,33 @@
         }
       ],
       "status": "done"
+    },
+    {
+      "id": "S44",
+      "title": "房主改 AI 难度，客人等候室看到的还是旧难度",
+      "criteria": [
+        {
+          "id": "S44-1",
+          "desc": "seats 消息带上房主当前 aiLevel；房主改难度走 hostSetAiLevel 并立刻广播",
+          "check": "cmd"
+        },
+        {
+          "id": "S44-2",
+          "desc": "客人存 roomAiLevel 并显示房主选的难度；进房与回大厅时重置",
+          "check": "cmd"
+        },
+        {
+          "id": "S44-3",
+          "desc": "真浏览器：房主点「难」后，客人 roomAiLevel=2、等候室文本含「难」（修复前一直是「普通」）",
+          "check": "cmd"
+        },
+        {
+          "id": "S44-4",
+          "desc": "验收：169 tests + build + smoke-p2p 全过",
+          "check": "cmd"
+        }
+      ],
+      "status": "done"
     }
   ]
 }

@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { HelpSheet } from './HelpSheet'
 import { useStore } from '../state/store'
-import { hostAddAi, hostKick, hostRemoveAi, hostStart, destroyRoom } from '../net/host'
+import { hostAddAi, hostKick, hostRemoveAi, hostSetAiLevel, hostStart, destroyRoom } from '../net/host'
 import { joinRoom, leaveGuest } from '../net/guest'
 import { shareLink, codeFromUrl } from '../net/room'
 import type { Seat } from '../core/engine'
@@ -105,7 +105,9 @@ function GuestWaiting({
   onHelp: () => void
 }) {
   const list = seats ?? []
-  const aiLevel = useStore((s) => s.aiLevel)
+  const roomAiLevel = useStore((s) => s.roomAiLevel)
+  const ownAiLevel = useStore((s) => s.aiLevel)
+  const aiLevel = roomAiLevel ?? ownAiLevel
   return (
     <div className="mx-auto w-full max-w-[480px] px-4 py-8">
       <div className="panel p-5">
@@ -232,7 +234,7 @@ function HostSide({ code, seats }: { code: string | null; seats: RoomSeats }) {
             {AI_LEVELS.map((l) => (
               <button
                 key={l.v}
-                onClick={() => useStore.setState({ aiLevel: l.v })}
+                onClick={() => hostSetAiLevel(l.v)}
                 className={[
                   'rounded-control border px-3 py-1 text-[13px]',
                   aiLevel === l.v

@@ -146,7 +146,7 @@ function hostSeatsChanged(r: HostRoom): void {
   for (const s of r.seats) {
     if (s.kind !== 'guest' || !s.connId) continue
     const conn = (r.peer.connections as Record<string, DataConnection[]>)[s.connId]?.[0]
-    conn?.send({ t: 'seats', seats } satisfies Msg)
+    conn?.send({ t: 'seats', seats, aiLevel: useStore.getState().aiLevel } satisfies Msg)
   }
 }
 
@@ -192,6 +192,13 @@ export function hostKick(seat: Seat): void {
   if (r.match) r.match.players[seat]!.isBot = true
   useStore.setState({ roomSeats: [...r.seats] })
   setTimeout(() => conn?.close(), 200)
+}
+
+/** 房主改 AI 难度：立刻同步给所有客人，别让他们看着旧的难度等开局。 */
+export function hostSetAiLevel(level: 0 | 1 | 2): void {
+  useStore.setState({ aiLevel: level })
+  const r = room
+  if (r) hostSeatsChanged(r)
 }
 
 export function hostAddAi(seat: Seat): void {

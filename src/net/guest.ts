@@ -37,6 +37,7 @@ export function joinRoom(codeOrUrl?: string, opts?: { watch?: boolean }): 'bad-c
     roomCode: code,
     joining: true,
     roomSeats: null,
+    roomAiLevel: null,
     spectating: opts?.watch === true,
     // 重新连接：把「断开 / 被请出」的状态清掉，不然界面还停在断线页
     guestLost: false,
@@ -83,7 +84,7 @@ function guestHandle(msg: Msg): void {
     return
   }
   if (msg.t === 'seats') {
-    useStore.setState({ roomSeats: msg.seats })
+    useStore.setState({ roomSeats: msg.seats, roomAiLevel: msg.aiLevel })
     return
   }
   if (msg.t === 'leave') {
