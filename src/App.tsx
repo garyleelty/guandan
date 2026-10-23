@@ -5,6 +5,7 @@ import { Table } from './ui/Table'
 import { RoomView } from './ui/RoomView'
 import { aiMove, aiTributeMove } from './core/ai'
 import { joinRoom } from './net/guest'
+import { turnMs } from './net/turnTimer'
 import { loadSolo } from './state/soloSave'
 import { decodeReplay, encodeReplay, replayFromState, type ReplayData } from './core/replay'
 import { ReplayView } from './ui/ReplayView'
@@ -45,6 +46,25 @@ export default function App() {
       else useStore.getState().startSolo()
     }
   }, [])
+
+  // P2P 回合计时：轮到真人（客人或房主自己）限时行动，到点房主托管代打。
+  // 单机不限时；AI 座由下面的 effect 即刻接手，不走这里。
+  useEffect(() => {
+    if (mode !== 'host' || !match) return
+    if (match.phase !== 'playing' && match.phase !== 'tribute') return
+    const turn = match.turn
+    if (match.players[turn]!.isBot) return
+    const t = setTimeout(() => {
+      const cur = useStore.getState().match
+      if (!cur || cur.turn !== turn) return
+      if (cur.phase !== 'playing' && cur.phase !== 'tribute') return
+      const action = cur.phase === 'tribute' ? aiTributeMove(cur, turn) : aiMove(cur, turn)
+      // 打上托管标记，牌谱里看得出这一手是代打的
+      const marked = action.kind === 'give' ? action : { ...action, auto: true }
+      useStore.getState().dispatch(marked)
+    }, turnMs())
+    return () => clearTimeout(t)
+  }, [match, mode])
 
   // 进贡阶段：AI 交贡 / 抗贡 / 还牌
   useEffect(() => {

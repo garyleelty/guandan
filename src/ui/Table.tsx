@@ -10,6 +10,7 @@ import type { GameState, Seat } from '../core/engine'
 import { teamOf } from '../core/engine'
 import { aiMove } from '../core/ai'
 import { isMuted, playSound, toggleMute } from './sound'
+import { turnMs } from '../net/turnTimer'
 import { TributePanel } from './TributePanel'
 import { PlayHistory } from './PlayHistory'
 import { encodeReplay, replayFromState } from '../core/replay'
@@ -100,6 +101,7 @@ function RoundLog({ st }: { st: GameState }) {
                   <span className="num text-muted">{RANK_LABEL[e.combo.rank] ?? ''}</span>
                 </>
               )}
+              {e.auto && <span className="text-faint">· 托管</span>}
             </span>
           ))}
         </div>
@@ -178,6 +180,8 @@ export function Table() {
   const [hint, setHint] = useState<string | null>(null)
   const [fx, setFx] = useState<0 | 7 | 9>(0)
   const [mute, setMute] = useState(isMuted())
+  // 回合计时（仅 P2P）：本地估算，收到新状态就重置；到 0 前后房主会托管代打
+  const [clock, setClock] = useState<number | null>(null)
 
   const me = st.players[mySeat]!
   const next = st.players[(mySeat + 1) % 4]!
@@ -274,6 +278,17 @@ export function Table() {
   useEffect(() => {
     setHint(null)
   }, [st.log.length, st.turn])
+
+  // 回合计时：P2P 里每步重置倒计时；单机不限时
+  useEffect(() => {
+    if (mode === 'solo' || (st.phase !== 'playing' && st.phase !== 'tribute')) {
+      setClock(null)
+      return
+    }
+    setClock(Math.ceil(turnMs() / 1000))
+    const iv = setInterval(() => setClock((c) => (c === null ? null : Math.max(0, c - 1))), 1000)
+    return () => clearInterval(iv)
+  }, [st, mode])
 
   // 「已重新连接」只是提醒：4 秒后自己消失，别整局挂在顶栏
   useEffect(() => {
@@ -458,6 +473,15 @@ export function Table() {
           {tributeTurn && (
             <span className="chip bg-accent/15 text-accent" data-testid="tribute-turn">
               {tribute?.step === 'return' ? '轮到你还牌' : '轮到你进贡'}
+            </span>
+          )}
+          {clock !== null && (
+            <span
+              className={['chip num', clock <= 5 ? 'bg-accent/15 text-accent' : ''].join(' ')}
+              data-testid="turn-clock"
+              title="回合计时：到点没动作会由 AI 托管"
+            >
+              ⏱ {clock}s
             </span>
           )}
           {selCards.length > 0 && !isTribute && (

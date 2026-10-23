@@ -23,7 +23,13 @@ export interface TrickState {
   lastPlay: { seat: Seat; combo: Combo } | null
 }
 
-export type LogEntry = { seat: Seat; ids: string[]; combo: { type: number; rank: number; count?: number } | null }
+export type LogEntry = {
+  seat: Seat
+  ids: string[]
+  combo: { type: number; rank: number; count?: number } | null
+  /** 托管：回合计时到点，由 AI 代打的这一手 */
+  auto?: boolean
+}
 
 /** 一局的结果：谁赢、升了几级、打完后的级数。 */
 export type RoundResult = { winner: Team; delta: number; levels: Record<Team, number> }
@@ -80,8 +86,8 @@ export interface GameState {
 }
 
 export type Action =
-  | { kind: 'pass'; seat: Seat }
-  | { kind: 'play'; seat: Seat; cards?: string[] }
+  | { kind: 'pass'; seat: Seat; auto?: boolean }
+  | { kind: 'play'; seat: Seat; cards?: string[]; auto?: boolean }
   /** 进贡：给牌 = card；不给 = 抗贡 */
   | { kind: 'give'; seat: Seat; card?: string }
 
@@ -380,7 +386,7 @@ function doPass(state: GameState, action: Action & { kind: 'pass' }): GameState 
   if (!state.trick.table || !state.trick.lastPlay) return state
   if (!state.trick.pending.includes(action.seat)) return state
   const st = structuredClone(state)
-  st.log.push({ seat: action.seat, ids: [], combo: null })
+  st.log.push({ seat: action.seat, ids: [], combo: null, auto: action.auto || undefined })
   st.trick.pending = st.trick.pending.filter((s) => s !== action.seat)
   if (st.trick.pending.length === 0) {
     const winner = st.trick.lastPlay!.seat
@@ -411,7 +417,12 @@ function doPlay(state: GameState, action: Action & { kind: 'play' }): GameState 
   const st = structuredClone(state)
   const player = st.players[action.seat]!
   player.hand = player.hand.filter((c) => !ids.includes(c.id))
-  st.log.push({ seat: action.seat, ids, combo: { type: combo.type, rank: combo.rank, count: combo.count } })
+  st.log.push({
+    seat: action.seat,
+    ids,
+    combo: { type: combo.type, rank: combo.rank, count: combo.count },
+    auto: action.auto || undefined,
+  })
   st.trick = {
     leader: action.seat,
     table: { seat: action.seat, combo },

@@ -60,26 +60,34 @@ function valueOf(cards: Card[], level: number): number {
   return cards.reduce((sum, c) => sum + effectiveRank(c, level) + (isWild(c, level) ? 30 : 0), 0)
 }
 
+/** 一手牌的直接代价（不含局面分与随机抖动）。 */
+function costOf(
+  m: Combo,
+  ctx: { shape: Map<number, number>; lead: boolean; level: number; breakScale: number; blockLead?: boolean; risk?: (m: Combo) => number },
+): number {
+  return (
+    valueOf(m.cards, ctx.level) +
+    (ctx.lead ? (LEAD_BONUS[m.type] ?? 0) : SPECIAL.has(m.type) ? SPECIAL_FOLLOW_COST : 0) +
+    breakPenalty(m, ctx.shape, ctx.level) * ctx.breakScale +
+    (ctx.risk ? ctx.risk(m) * RISK_COST : 0) +
+    (ctx.blockLead && m.type === ComboType.SINGLE ? (14 - m.rank) * 20 : 0)
+  )
+}
+
 function pickCheapest(
   moves: Combo[],
   shape: Map<number, number>,
   lead: boolean,
   level: number,
   risk?: (m: Combo) => number,
-  opts?: { breakScale?: number; jitter?: number; blockLead?: boolean; evalBonus?: (m: Combo) => number },
+  opts?: { breakScale?: number; jitter?: number; blockLead?: boolean },
 ): Combo | null {
   let best: Combo | null = null
   let bestCost = Infinity
   const breakScale = opts?.breakScale ?? 1
+  const ctx = { shape, lead, level, breakScale, blockLead: opts?.blockLead, risk }
   for (const m of moves) {
-    const cost =
-      valueOf(m.cards, level) +
-      (lead ? (LEAD_BONUS[m.type] ?? 0) : SPECIAL.has(m.type) ? SPECIAL_FOLLOW_COST : 0) +
-      breakPenalty(m, shape, level) * breakScale +
-      (risk ? risk(m) * RISK_COST : 0) +
-      (opts?.blockLead && m.type === ComboType.SINGLE ? (14 - m.rank) * 20 : 0) +
-      (opts?.jitter ? (Math.random() - 0.5) * opts.jitter : 0) -
-      (opts?.evalBonus ? opts.evalBonus(m) : 0)
+    const cost = costOf(m, ctx) + (opts?.jitter ? (Math.random() - 0.5) * opts.jitter : 0)
     if (cost < bestCost || (cost === bestCost && best !== null && m.rank < best.rank)) {
       best = m
       bestCost = cost
@@ -229,8 +237,6 @@ export function aiMove(st: GameState, seat: Seat): Action {
   const level = st.aiLevel ?? 1
   const breakScale = level === 0 ? 0 : 1
   const jitter = level === 0 ? 10 : 0
-  const evalBonus =
-    level >= 1 ? (m: Combo) => EVAL_WEIGHT * evaluate(simulate(st, seat, m), seat) : undefined
   const mine = teamOf(seat)
   const oppMin = Math.min(
     ...st.players.filter((p) => teamOf(p.seat) !== mine).map((p) => p.hand.length),
@@ -246,14 +252,28 @@ export function aiMove(st: GameState, seat: Seat): Action {
       (m) => m.type === ComboType.PAIR || m.type === ComboType.TRIPLE || m.type === ComboType.BOMB,
     )
     const possible = level >= 2 && hasGroup ? possibleCounts(st, seat) : null
-    const best = pickCheapest(
-      moves,
-      shape,
-      true,
-      st.handLevel,
-      possible ? (m) => beatRisk(m, possible, st, seat) : undefined,
-      { breakScale, jitter, blockLead, evalBonus },
-    )
+    const risk = possible ? (m: Combo) => beatRisk(m, possible, st, seat) : undefined
+    const ctx = { shape, lead: true, level: st.handLevel, breakScale, blockLead, risk }
+
+    // 普通 / 难档：先按代价排出前几名，只对它们做模拟打分（每个候选都要克隆局面，省着点用）
+    if (level >= 1) {
+      const shortlist = moves
+        .map((m) => ({ m, cost: costOf(m, ctx) }))
+        .sort((a, b) => a.cost - b.cost)
+        .slice(0, 12)
+      let best = shortlist[0]!.m
+      let bestScore = -Infinity
+      for (const { m, cost } of shortlist) {
+        const score = -cost + EVAL_WEIGHT * evaluate(simulate(st, seat, m), seat)
+        if (score > bestScore || (score === bestScore && m.rank < best.rank)) {
+          best = m
+          bestScore = score
+        }
+      }
+      return { kind: 'play', seat, cards: best.cards.map((c) => c.id) }
+    }
+
+    const best = pickCheapest(moves, shape, true, st.handLevel, risk, { breakScale, jitter, blockLead })
     if (!best) return { kind: 'pass', seat }
     return { kind: 'play', seat, cards: best.cards.map((c) => c.id) }
   }
