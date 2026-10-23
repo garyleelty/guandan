@@ -1,3 +1,4 @@
+import { canAntiTribute } from '../core/engine'
 import type { Action, GameState, Seat } from '../core/engine'
 
 export const CODE_CHARS = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'
@@ -45,6 +46,9 @@ export type Msg =
   /** 房主把某位客人请出房间 */
   | { t: 'kick'; seat: Seat; reason?: string }
 
+/** 进贡状态多带一个抗贡可用性：客人看不到别人手牌，由房主算好发过来 */
+export type SerializedTribute = NonNullable<GameState['tribute']> & { antiOk?: boolean }
+
 export interface SerializedState {
   phase: GameState['phase']
   levels: GameState['levels']
@@ -64,7 +68,7 @@ export interface SerializedState {
   finishCount: number
   log: GameState['log']
   history: GameState['history']
-  tribute: GameState['tribute']
+  tribute: SerializedTribute | null
   aiLevel: GameState['aiLevel']
 }
 
@@ -95,7 +99,12 @@ export function serializeFor(
     finishCount: st.finishCount,
     log: st.log,
     history: st.history,
-    tribute: st.tribute,
+    tribute: st.tribute
+      ? {
+          ...st.tribute,
+          antiOk: st.tribute.step === 'give' && canAntiTribute(st.tribute.givers.map((g) => st.players[g]!.hand)),
+        }
+      : null,
     aiLevel: st.aiLevel,
   }
 }

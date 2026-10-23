@@ -1,4 +1,4 @@
-import { teamOf, legalMoves, canAntiTribute } from './engine'
+import { teamOf, legalMoves, canAntiTribute, tributeCandidates, returnCandidates } from './engine'
 import type { Action, GameState, Seat } from './engine'
 import { ComboType } from './combos'
 import type { Combo } from './combos'
@@ -227,19 +227,18 @@ export function aiMove(st: GameState, seat: Seat): Action {
 
 /**
  * 进贡阶段的 AI 走法：
- * - 交贡：手里最大的一张；有双王/天王炸就抗贡；
- * - 还牌：手里最小的一张 ≤10 的牌。
+ * - 交贡：交手里最大的一张（红桃级牌不能交）；进贡方合计有两张大王就抗贡；
+ * - 还牌：还一张可还的最小牌（≤10 且非级牌）。
  */
 export function aiTributeMove(st: GameState, seat: Seat): Action {
   const t = st.tribute
   if (!t || st.phase !== 'tribute' || st.turn !== seat) return { kind: 'give', seat }
   const hand = st.players[seat]!.hand
   if (t.step === 'return') {
-    const back = hand.filter((c) => c.rank <= 10).sort((a, b) => a.rank - b.rank)[0]
+    const back = returnCandidates(hand, st.handLevel).sort((a, b) => a.rank - b.rank)[0]
     return back ? { kind: 'give', seat, card: back.id } : { kind: 'give', seat }
   }
-  if (canAntiTribute(hand)) return { kind: 'give', seat } // 抗贡
-  const level = st.handLevel
-  const biggest = [...hand].sort((a, b) => effectiveRank(b, level) - effectiveRank(a, level))[0]
+  if (canAntiTribute(t.givers.map((g) => st.players[g]!.hand))) return { kind: 'give', seat } // 抗贡
+  const biggest = tributeCandidates(hand, st.handLevel)[0]
   return biggest ? { kind: 'give', seat, card: biggest.id } : { kind: 'give', seat }
 }

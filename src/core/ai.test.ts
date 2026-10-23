@@ -167,7 +167,8 @@ function tributeState(st: GameState, turn: Seat, step: 'give' | 'return'): GameS
     turn,
     tribute: {
       order: [0, 1, 2, 3],
-      givers: [3],
+      // 交贡时轮到谁谁就是进贡者（抗贡按进贡方合计算）；还贡时轮到的是收贡方
+      givers: step === 'give' ? [turn] : [3],
       to: {},
       given: {},
       cards: {},
@@ -192,20 +193,20 @@ describe('aiTributeMove（进贡阶段）', () => {
     if (move.kind === 'give') expect(move.card).toBe(fid('K'))
   })
 
-  it('双王时抗贡（不给牌）', () => {
-    const { st } = scenario({ A: ['3', 'SJ', 'BJ'], B: ['4'], C: ['5'], D: ['6'] })
+  it('两张大王时抗贡（不给牌）', () => {
+    const { st } = scenario({ A: ['3', 'BJ0', 'BJ1'], B: ['4'], C: ['5'], D: ['6'] })
     const t = tributeState(st, 0, 'give')
     const move = aiTributeMove(t, 0)
     expect(move.kind).toBe('give')
     if (move.kind === 'give') expect(move.card).toBeUndefined()
   })
 
-  it('还牌：还最小的一张 ≤10 的牌（2 现在是最小的牌）', () => {
+  it('还牌：还一张可还的最小牌（级牌 2 不能还，还 3）', () => {
     const { st, fid } = scenario({ A: ['3', '5', '2'], B: ['4'], C: ['7'], D: ['8'] })
     const t = tributeState(st, 0, 'return')
     const move = aiTributeMove(t, 0)
     expect(move.kind).toBe('give')
-    if (move.kind === 'give') expect(move.card).toBe(fid('2'))
+    if (move.kind === 'give') expect(move.card).toBe(fid('3'))
   })
 })
 

@@ -84,7 +84,7 @@ describe('step 合法性', () => {
 })
 
 describe('trick 收拢与轮转', () => {
-  it('全员过 → 上出一个胜者收招、清桌、胜者领出', () => {
+  it('全员过 → 上出一个胜者收招、清桌；胜者已打空由搭档接风', () => {
     const { s } = drive(
       { A: ['3', '10'], B: ['9'], C: ['4'], D: ['5'] },
       [
@@ -97,7 +97,8 @@ describe('trick 收拢与轮转', () => {
     )
     expect(s.trick.table).toBeNull()
     expect(s.players[1]!.finishOrder).toBe(0)
-    expect(s.turn).toBe(2)
+    // 胜者（seat 1）打空，搭档 seat 3 接风领出
+    expect(s.turn).toBe(3)
   })
   it('领出无人应 → 自己继续领出', () => {
     const { s } = drive(
@@ -128,7 +129,7 @@ describe('头游与接风', () => {
     expect(x.players.map((p) => p.finishOrder)).toEqual([0, 1, 2, 3])
     expect(x.levels).toMatchObject({ even: 4, odd: 2 })
   })
-  it('接风：收招胜者已打空 → 领出权顺延到下一活跃座', () => {
+  it('接风：收招胜者已打空 → 搭档接风领出（对家借风）', () => {
     const { st, fid } = scenario({ A: ['3'], B: ['6', '4'], C: ['K', '5'], D: ['7'] })
     let s = play(st, 0, fid('3'))
     expect(s.players[0]!.finishOrder).toBe(0)
@@ -137,23 +138,17 @@ describe('头游与接风', () => {
     s = pass(s, 2)
     s = pass(s, 3)
     expect(s.trick.table).toBeNull()
-    expect(s.turn).toBe(1)
-    s = play(s, 1, fid('4'))
-    s = pass(s, 2)
+    // 头游（seat 0）的搭档是 seat 2，由他接风，而不是顺延到下家 seat 1
+    expect(s.turn).toBe(2)
+    s = play(s, 2, fid('K'))
     s = pass(s, 3)
-    expect(s.turn).toBe(1)
-    s = play(s, 1, fid('6'))
-    expect(s.players[1]!.finishOrder).toBe(1)
-    s = pass(s, 2)
-    s = pass(s, 3)
-    expect(s.trick.table).toBeNull()
+    s = pass(s, 1)
     expect(s.turn).toBe(2)
     s = play(s, 2, fid('5'))
-    s = pass(s, 3)
-    s = play(s, 2, fid('K'))
+    // 搭档接风后打空 → 头游 + 二游同队，双下立即结束
     expect(s.phase).toBe('ended')
-    expect(s.players.map((p) => p.finishOrder)).toEqual([0, 1, 2, 3])
-    expect(s.levels).toMatchObject({ even: 4, odd: 2 })
+    expect(s.players.map((p) => p.finishOrder)).toEqual([0, 2, 1, 3])
+    expect(s.levels).toMatchObject({ even: 5, odd: 2 })
   })
 })
 
@@ -193,12 +188,14 @@ describe('本场战绩（history）', () => {
         [1, 'pass'],
         [2, 'pass'],
         [3, 'pass'],
+        // 头游（seat 0）打空，搭档 seat 2 接风
+        [2, 'play', '5'],
+        [3, 'pass'],
         [1, 'play', '6'],
         [2, 'pass'],
         [3, 'pass'],
-        [2, 'play', '8'],
-        [3, 'pass'],
-        [2, 'play', '5'],
+        // 二游（seat 1）打空，其搭档 seat 3 接风
+        [3, 'play', '4'],
       ],
       { levels: { even: 14, odd: 2 } },
     )
@@ -230,18 +227,23 @@ describe('升级计分', () => {
   })
   it('1+3 → +2', () => {
     const { s } = drive(
-      { A: ['3'], B: ['6'], C: ['8', '5'], D: ['4'] },
+      { A: ['3'], B: ['9'], C: ['5', '8', 'K'], D: ['4', '2'] },
       [
         [0, 'play', '3'],
         [1, 'pass'],
         [2, 'pass'],
         [3, 'pass'],
-        [1, 'play', '6'],
+        // 头游（seat 0）打空，搭档 seat 2 接风
+        [2, 'play', '5'],
+        [3, 'pass'],
+        [1, 'play', '9'],
         [2, 'pass'],
         [3, 'pass'],
+        // 二游（seat 1）打空，其搭档 seat 3 接风
+        [3, 'play', '4'],
         [2, 'play', '8'],
         [3, 'pass'],
-        [2, 'play', '5'],
+        [2, 'play', 'K'],
       ],
     )
     expect(s.phase).toBe('ended')
@@ -250,17 +252,22 @@ describe('升级计分', () => {
   })
   it('1+4 → +1', () => {
     const { s } = drive(
-      { A: ['3'], B: ['6'], C: ['8', '5'], D: ['9', '4'] },
+      { A: ['3'], B: ['9'], C: ['5', '8'], D: ['4', '7', '2'] },
       [
         [0, 'play', '3'],
         [1, 'pass'],
         [2, 'pass'],
         [3, 'pass'],
-        [1, 'play', '6'],
+        // 头游（seat 0）打空，搭档 seat 2 接风
+        [2, 'play', '5'],
+        [3, 'play', '7'],
+        [1, 'play', '9'],
         [2, 'pass'],
-        [3, 'play', '9'],
-        [2, 'pass'],
+        [3, 'pass'],
+        // 二游（seat 1）打空，其搭档 seat 3 接风
         [3, 'play', '4'],
+        [2, 'pass'],
+        [3, 'play', '2'],
       ],
     )
     expect(s.phase).toBe('ended')
@@ -307,12 +314,14 @@ describe('升级计分', () => {
         [1, 'pass'],
         [2, 'pass'],
         [3, 'pass'],
+        // 头游（seat 0）打空，搭档 seat 2 接风
+        [2, 'play', '5'],
+        [3, 'pass'],
         [1, 'play', '6'],
         [2, 'pass'],
         [3, 'pass'],
-        [2, 'play', '8'],
-        [3, 'pass'],
-        [2, 'play', '5'],
+        // 二游（seat 1）打空，其搭档 seat 3 接风
+        [3, 'play', '4'],
       ],
       { levels: { even: 14, odd: 4 } },
     )

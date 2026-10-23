@@ -13,7 +13,7 @@ import { isMuted, playSound, toggleMute } from './sound'
 import { TributePanel } from './TributePanel'
 import { PlayHistory } from './PlayHistory'
 import { encodeReplay, replayFromState } from '../core/replay'
-import { canAntiTribute } from '../core/engine'
+import { canAntiTribute, returnCandidates, tributeCandidates } from '../core/engine'
 
 const COMBO_LABEL: Record<number, string> = {
   0: '单张', 1: '对子', 2: '三张', 3: '三带二', 4: '顺子', 5: '连对', 6: '钢板',
@@ -191,15 +191,22 @@ export function Table() {
   const selCards = useMemo(() => me.hand.filter((c) => selected.has(c.id)), [me.hand, selected])
   const selCombo = selCards.length >= 1 ? identify(selCards, st.handLevel) : null
   const canPlay = !!selCombo && (!table || beats(selCombo, table.combo))
-  // 进贡：只能交一张；还牌：只能还一张不大于 10 的牌
-  const canGive = tributeTurn && tribute?.step === 'give' && selCards.length === 1
-  const hasLowCard = me.hand.some((c) => c.rank <= 10)
+  // 进贡：只能交一张最大牌（红桃级牌不能交）；还牌：只能还一张可还的牌（≤10 且非级牌）
+  const giveCandidates = tribute?.step === 'give' ? tributeCandidates(me.hand, st.handLevel) : []
+  const canGive =
+    tributeTurn && tribute?.step === 'give' && selCards.length === 1 && giveCandidates.some((c) => c.id === selCards[0]!.id)
+  const backCandidates = tribute?.step === 'return' ? returnCandidates(me.hand, st.handLevel) : []
   const canReturn =
     tributeTurn &&
     tribute?.step === 'return' &&
     selCards.length === 1 &&
-    (selCards[0]!.rank <= 10 || !hasLowCard)
-  const canAnti = tributeTurn && tribute?.step === 'give' && canAntiTribute(me.hand)
+    backCandidates.some((c) => c.id === selCards[0]!.id)
+  // 客人看不到别人手牌，抗贡能不能用由房主算好随状态发来（antiOk）；本地（单机/房主）自己算
+  const canAnti =
+    tributeTurn &&
+    tribute?.step === 'give' &&
+    ((tribute as { antiOk?: boolean }).antiOk ??
+      canAntiTribute(tribute.givers.map((g) => st.players[g]!.hand)))
   const canPass = myTurn && !!table && st.trick.pending.includes(mySeat)
 
   const toggle = (id: string) => {
@@ -543,7 +550,12 @@ export function Table() {
           levelCardRank={levelCardRank}
           view={handView}
           dimmed={(c) => {
-            if (isTribute) return false
+            if (isTribute) {
+              // 进贡/还牌时，不可选的牌变暗（可还的牌一张都没有时引擎不设限，这里也不暗）
+              if (!tributeTurn) return false
+              const pool = tribute?.step === 'give' ? giveCandidates : backCandidates
+              return !selected.has(c.id) && !pool.some((x) => x.id === c.id)
+            }
             if (!myTurn || !table) return false
             const c1 = identify([...selCards, c], st.handLevel)
             if (selected.has(c.id)) return false

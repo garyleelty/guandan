@@ -1,4 +1,4 @@
-import { RANK, deal, isWild, levelToRank, newShuffledDeck, sortCards } from './cards'
+import { RANK, deal, effectiveRank, isWild, levelToRank, newShuffledDeck, sortCards } from './cards'
 import type { Card } from './cards'
 import { identify, beats, straightWindows } from './combos'
 import type { Combo } from './combos'
@@ -216,16 +216,28 @@ export function step(state: GameState, action: Action): GameState {
   return state
 }
 
-/** 手上有双王或四张王才能抗贡。 */
-export function canAntiTribute(hand: Card[]): boolean {
-  const sj = hand.filter((c) => c.rank === RANK.SJ).length
-  const bj = hand.filter((c) => c.rank === RANK.BJ).length
-  return (sj >= 1 && bj >= 1) || sj + bj >= 4
+/**
+ * 抗贡（官方口径）：进贡方**合计**手里有两张大王就可以不进贡（天王炸含两张大王，
+ * 自然满足；一大小王不算）。双下游时两家手里的大王加在一起算。
+ */
+export function canAntiTribute(hands: Card[][]): boolean {
+  const bigJokers = hands.reduce((n, h) => n + h.filter((c) => c.rank === RANK.BJ).length, 0)
+  return bigJokers >= 2
 }
 
-/** 还牌必须是点数不大于 10 的牌；我们牌序里 2 记作 18，所以实际是 3–10。 */
-function isReturnable(card: Card): boolean {
-  return card.rank <= 10
+/** 进贡能交的牌：必须交手里最大的一张（红桃级牌是逢人配，不能进贡）。 */
+export function tributeCandidates(hand: Card[], level: number): Card[] {
+  const eligible = hand.filter((c) => !isWild(c, level))
+  const pool = eligible.length > 0 ? eligible : hand
+  const max = Math.max(...pool.map((c) => effectiveRank(c, level)))
+  return pool.filter((c) => effectiveRank(c, level) === max)
+}
+
+/** 还贡能还的牌：点数不大于 10，且不能还级牌（官方口径）。 */
+export function returnCandidates(hand: Card[], level: number): Card[] {
+  const ok = hand.filter((c) => c.rank <= 10 && c.rank !== levelToRank(level))
+  // 极端牌面手里一张可还的都没有时就不设限，别把牌局卡死
+  return ok.length > 0 ? ok : [...hand]
 }
 
 function doGive(state: GameState, action: Action & { kind: 'give' }): GameState {
@@ -240,17 +252,27 @@ function doGive(state: GameState, action: Action & { kind: 'give' }): GameState 
     if (!tt.givers.includes(action.seat)) return state
     if (action.seat in tt.given) return state
     if (action.card === undefined) {
-      // 抗贡
-      if (!canAntiTribute(st.players[action.seat]!.hand)) return state
-      tt.anti.push(action.seat)
-      tt.given[action.seat] = null
-    } else {
-      const card = st.players[action.seat]!.hand.find((c) => c.id === action.card)
-      if (!card) return state
-      st.players[action.seat]!.hand = st.players[action.seat]!.hand.filter((c) => c.id !== card.id)
-      tt.given[action.seat] = card.id
-      tt.cards[action.seat] = card
+      // 抗贡：进贡方合计两张大王即可，一人声明全队免贡（已交的贡牌退回）
+      if (!canAntiTribute(tt.givers.map((g) => st.players[g]!.hand))) return state
+      for (const g of tt.givers) {
+        const givenId = tt.given[g]
+        if (givenId != null) {
+          const back = tt.cards[g]!
+          st.players[g]!.hand = sortCards([...st.players[g]!.hand, back], st.handLevel)
+          delete tt.cards[g]
+        }
+        tt.given[g] = null
+        if (!tt.anti.includes(g)) tt.anti.push(g)
+      }
+      return startTributeReturns(st)
     }
+    const card = st.players[action.seat]!.hand.find((c) => c.id === action.card)
+    if (!card) return state
+    // 官方口径：必须交手里最大的一张（红桃级牌不能进贡）
+    if (!tributeCandidates(st.players[action.seat]!.hand, st.handLevel).some((c) => c.id === card.id)) return state
+    st.players[action.seat]!.hand = st.players[action.seat]!.hand.filter((c) => c.id !== card.id)
+    tt.given[action.seat] = card.id
+    tt.cards[action.seat] = card
     const next = tt.givers.find((g) => !(g in tt.given))
     if (next !== undefined) {
       st.turn = next
@@ -266,8 +288,7 @@ function doGive(state: GameState, action: Action & { kind: 'give' }): GameState 
   const hand = st.players[action.seat]!.hand
   const card = hand.find((c) => c.id === action.card)
   if (!card) return state
-  // 还牌上限 10；手里一张都没有时（极端牌面）就还最小的一张，别把牌局卡死
-  if (!isReturnable(card) && hand.some(isReturnable)) return state
+  if (!returnCandidates(hand, st.handLevel).some((c) => c.id === card.id)) return state
   st.players[action.seat]!.hand = st.players[action.seat]!.hand.filter((c) => c.id !== card.id)
   const to = tt.returnTo[action.seat]!
   st.players[to]!.hand = sortCards([...st.players[to]!.hand, card], st.handLevel)
@@ -365,7 +386,9 @@ function doPass(state: GameState, action: Action & { kind: 'pass' }): GameState 
     const winner = st.trick.lastPlay!.seat
     st.trick = { leader: winner, table: null, pending: [], lastPlay: null }
     if (st.players[winner]!.finishOrder !== null) {
-      st.trick.leader = nextActiveAfter(st, winner)
+      // 官方「接风」（对家借风）：出完牌者的最后一手没人压，由其搭档接风领出
+      const partner = ((winner + 2) % 4) as Seat
+      st.trick.leader = st.players[partner]!.finishOrder === null ? partner : nextActiveAfter(st, winner)
     }
     st.turn = st.trick.leader
   } else {

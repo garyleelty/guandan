@@ -14,8 +14,10 @@ export function TributePanel({ st, mySeat }: { st: GameState; mySeat: Seat }) {
   if (!t) return null
   const turn = st.players[st.turn]!
   const mine = st.turn === mySeat
-  const myHand = st.players[mySeat]!.hand
-  const canAnti = t.step === 'give' && mine && canAntiTribute(myHand)
+  const canAnti =
+    t.step === 'give' &&
+    mine &&
+    ((t as { antiOk?: boolean }).antiOk ?? canAntiTribute(t.givers.map((g) => st.players[g]!.hand)))
 
   const lines = t.givers.map((g) => {
     const name = st.players[g]!.name
@@ -70,9 +72,7 @@ export function TributePanel({ st, mySeat }: { st: GameState; mySeat: Seat }) {
       {t.step === 'give' && t.givers.length > 1 && (
         <div className="text-[12px] text-faint">双下游：两人各交一张，大的给头游、小的给二游</div>
       )}
-      {canAnti && (
-        <div className="text-[12px] text-faint">你手上有双王或天王炸，可以抗贡（不交牌）</div>
-      )}
+      {canAnti && <div className="text-[12px] text-faint">你们手里合计有两张大王，可以抗贡（全队免贡，头游领出）</div>}
     </div>
   )
 }
