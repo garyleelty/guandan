@@ -1,4 +1,4 @@
-import { teamOf, legalMoves, canAntiTribute, tributeCandidates, returnCandidates } from './engine'
+import { teamOf, legalMoves, canAntiTribute, tributeCandidates, returnCandidates, step } from './engine'
 import type { Action, GameState, Seat } from './engine'
 import { ComboType } from './combos'
 import type { Combo } from './combos'
@@ -66,7 +66,7 @@ function pickCheapest(
   lead: boolean,
   level: number,
   risk?: (m: Combo) => number,
-  opts?: { breakScale?: number; jitter?: number; blockLead?: boolean },
+  opts?: { breakScale?: number; jitter?: number; blockLead?: boolean; evalBonus?: (m: Combo) => number },
 ): Combo | null {
   let best: Combo | null = null
   let bestCost = Infinity
@@ -78,13 +78,65 @@ function pickCheapest(
       breakPenalty(m, shape, level) * breakScale +
       (risk ? risk(m) * RISK_COST : 0) +
       (opts?.blockLead && m.type === ComboType.SINGLE ? (14 - m.rank) * 20 : 0) +
-      (opts?.jitter ? (Math.random() - 0.5) * opts.jitter : 0)
+      (opts?.jitter ? (Math.random() - 0.5) * opts.jitter : 0) -
+      (opts?.evalBonus ? opts.evalBonus(m) : 0)
     if (cost < bestCost || (cost === bestCost && best !== null && m.rank < best.rank)) {
       best = m
       bestCost = cost
     }
   }
   return best
+}
+
+// ── 打分制评估（普通 / 难档启用）：模拟一手之后的局面值多少分 ──
+
+const LEFT_WEIGHT = 3
+const BOMB_ASSET = 30
+const CONTROL_BONUS = 12
+const EVAL_WEIGHT = 1
+
+/** 模拟「打出这手（null = 过）」之后的局面，供打分用。 */
+function simulate(st: GameState, seat: Seat, mv: Combo | null): GameState {
+  return mv
+    ? step(st, { kind: 'play', seat, cards: mv.cards.map((c) => c.id) })
+    : step(st, { kind: 'pass', seat })
+}
+
+/**
+ * 局面打分（越大越好，站在 seat 的队伍立场）：
+ * - 剩牌差：我队（含搭档）剩的越少越好，对面越多越好；
+ * - 炸弹资产：手里的炸弹 / 王对是后手潜力，谁的在谁那边记账；
+ * - 出牌权：桌面是我队的牌 = 主动权；
+ * - 走完名次：自己打完按名次重奖，整场结束直接定胜负。
+ */
+function evaluate(st: GameState, seat: Seat): number {
+  const mine = teamOf(seat)
+  if (st.phase === 'ended') {
+    const winner = st.players.find((p) => p.finishOrder === 0)!
+    if (st.matchWinner !== null) return st.matchWinner === mine ? 5000 : -5000
+    return teamOf(winner.seat) === mine ? 500 : -500
+  }
+  let ourLeft = 0
+  let theirLeft = 0
+  let bombs = 0
+  for (const p of st.players) {
+    const sign = teamOf(p.seat) === mine ? 1 : -1
+    if (sign > 0) ourLeft += p.hand.length
+    else theirLeft += p.hand.length
+    const shape = handShape(p.hand, st.handLevel)
+    for (const [, n] of shape) if (n >= 4) bombs += sign
+    if ((shape.get(RANK.SJ) ?? 0) >= 1 && (shape.get(RANK.BJ) ?? 0) >= 1) bombs += sign
+  }
+  let score = (theirLeft - ourLeft) * LEFT_WEIGHT + bombs * BOMB_ASSET
+  if (st.trick.table) score += teamOf(st.trick.table.seat) === mine ? CONTROL_BONUS : -CONTROL_BONUS
+  const meAfter = st.players[seat]!.finishOrder
+  if (meAfter !== null) score += 300 - meAfter * 100
+  return score
+}
+
+/** 跟牌那一手的直接代价：牌面价值 +（炸系后手成本）+ 拆牌。 */
+function followCost(m: Combo, shape: Map<number, number>, level: number): number {
+  return valueOf(m.cards, level) + (SPECIAL.has(m.type) ? SPECIAL_FOLLOW_COST : 0) + breakPenalty(m, shape, level)
 }
 
 /** 牌 id → 点数：牌就那么 108 张，缓存一下省得反复解字符串。 */
@@ -160,10 +212,10 @@ const RISK_COST = 12
 
 /**
  * AI 走子：
- * - 领出：代价最小的组合（顺子/对子优先，保留炸弹与三张结构）
- * - 跟牌：能小压就小压；拆牌代价过高就过
- * - 炸弹：对手只剩 1-2 张时才动
- * - 好牌不赢：级牌留到最后
+ * - 领出：候选逐个模拟一步打分（牌面代价 + 局面分），炸弹与级牌默认留着
+ * - 跟牌：能小压就小压；拆牌代价过高就过；普通/难档用局面分决定「压还是过」
+ * - 炸弹：对手只剩 1-2 张时才动（紧急）
+ * - 好牌不赢：级牌（比 A 还大）留到最后
  */
 export function aiMove(st: GameState, seat: Seat): Action {
   if (st.phase !== 'playing' || st.turn !== seat) return { kind: 'pass', seat }
@@ -173,10 +225,12 @@ export function aiMove(st: GameState, seat: Seat): Action {
   const table = st.trick.table
   const hand = st.players[seat]!.hand
   const shape = handShape(hand, st.handLevel)
-  // 难度：0 简单（拆牌代价打折、选择带随机）· 1 普通 · 2 难（加记牌风险）
+  // 难度：0 简单（纯代价 + 随机）· 1 普通（+局面打分）· 2 难（+记牌风险）
   const level = st.aiLevel ?? 1
   const breakScale = level === 0 ? 0 : 1
   const jitter = level === 0 ? 10 : 0
+  const evalBonus =
+    level >= 1 ? (m: Combo) => EVAL_WEIGHT * evaluate(simulate(st, seat, m), seat) : undefined
   const mine = teamOf(seat)
   const oppMin = Math.min(
     ...st.players.filter((p) => teamOf(p.seat) !== mine).map((p) => p.hand.length),
@@ -191,14 +245,14 @@ export function aiMove(st: GameState, seat: Seat): Action {
     const hasGroup = moves.some(
       (m) => m.type === ComboType.PAIR || m.type === ComboType.TRIPLE || m.type === ComboType.BOMB,
     )
-    const possible = hasGroup ? possibleCounts(st, seat) : null
+    const possible = level >= 2 && hasGroup ? possibleCounts(st, seat) : null
     const best = pickCheapest(
       moves,
       shape,
       true,
       st.handLevel,
-      level >= 2 && possible ? (m) => beatRisk(m, possible, st, seat) : undefined,
-      { breakScale, jitter, blockLead },
+      possible ? (m) => beatRisk(m, possible, st, seat) : undefined,
+      { breakScale, jitter, blockLead, evalBonus },
     )
     if (!best) return { kind: 'pass', seat }
     return { kind: 'play', seat, cards: best.cards.map((c) => c.id) }
@@ -222,6 +276,13 @@ export function aiMove(st: GameState, seat: Seat): Action {
     return { kind: 'pass', seat }
   }
 
+  // 紧急 / 简单档：直接压，不犹豫
+  if (urgent || level === 0) return { kind: 'play', seat, cards: best.cards.map((c) => c.id) }
+
+  // 普通 / 难档：局面分比较「压这一手」与「过」——模拟一步，看哪个局面更舒展
+  const playScore = -followCost(best, shape, st.handLevel) + EVAL_WEIGHT * evaluate(simulate(st, seat, best), seat)
+  const passScore = EVAL_WEIGHT * evaluate(simulate(st, seat, null), seat)
+  if (playScore < passScore) return { kind: 'pass', seat }
   return { kind: 'play', seat, cards: best.cards.map((c) => c.id) }
 }
 
