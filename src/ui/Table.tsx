@@ -163,7 +163,16 @@ export function Table() {
   const reconnected = useStore((s) => s.reconnected)
   const spectating = useStore((s) => s.spectating)
   const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [handMode, setHandMode] = useState<'rank' | 'suit'>('rank')
+  // 理牌偏好记住（点数 / 花色）：下次进牌桌还是顺手的那一种
+  const [handMode, setHandMode] = useState<'rank' | 'suit'>(() =>
+    localStorage.getItem('gd-sort-pref') === 'suit' ? 'suit' : 'rank',
+  )
+  const switchHandMode = () =>
+    setHandMode((m) => {
+      const next = m === 'rank' ? 'suit' : 'rank'
+      localStorage.setItem('gd-sort-pref', next)
+      return next
+    })
   const [handView, setHandView] = useState<'row' | 'grid'>('row')
   const [showHistory, setShowHistory] = useState(false)
   const [hint, setHint] = useState<string | null>(null)
@@ -503,7 +512,7 @@ export function Table() {
             </button>
             <button
               className="btn btn-ghost btn-sm max-sm:px-2"
-              onClick={() => setHandMode((m) => (m === 'rank' ? 'suit' : 'rank'))}
+              onClick={switchHandMode}
               title="点数排序 / 按花色聚拢"
               data-testid="sort-hand"
             >

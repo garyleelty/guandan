@@ -44,10 +44,10 @@ export function Lobby() {
   const [nick_, setNick] = useState(nick())
   const deep = mode === 'guest' || codeFromUrl()
 
-  // 战绩：从本机存的历史里读，回到大厅时刷新一次
+  // 战绩：从本机存的历史里读（大厅每次挂载都会重跑，回大厅即刷新）
   useEffect(() => {
     setStats(loadStats())
-  }, [screen])
+  }, [])
 
   if (deep)
     return (

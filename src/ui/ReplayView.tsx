@@ -74,8 +74,6 @@ export function ReplayView({ data }: { data: ReplayData }) {
         </div>
       )}
 
-      {breakdown && <p className="mt-2 text-[13px] text-faint">{breakdown}</p>}
-
       <div className="panel mt-3 flex min-h-0 flex-1 flex-col p-4">
         <PlayList log={log} names={data.n} emptyText="这一局没有记录" />
       </div>
