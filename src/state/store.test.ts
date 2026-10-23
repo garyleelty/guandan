@@ -83,3 +83,25 @@ describe('单机续局', () => {
     expect(s.aiLevel).toBe(2)
   })
 })
+
+describe('离开牌桌的状态清理', () => {
+  it('回大厅清掉「已重新连接 / 观战 / 被请出」标记', () => {
+    useStore.setState({ reconnected: true, spectating: true, kicked: '你已被房主请出房间', roomAiLevel: 2 })
+    useStore.getState().backToLobby()
+    const s = useStore.getState()
+    expect(s.reconnected).toBe(false)
+    expect(s.spectating).toBe(false)
+    expect(s.kicked).toBe('')
+    expect(s.roomAiLevel).toBeNull()
+  })
+
+  it('开单机局不会把联机标记带进牌桌', () => {
+    // 直接调 startSolo 也应该是干净的（不只依赖 backToLobby）
+    useStore.setState({ reconnected: true, spectating: true, kicked: '你已被房主请出房间' })
+    useStore.getState().startSolo()
+    const s = useStore.getState()
+    expect(s.reconnected).toBe(false)
+    expect(s.spectating).toBe(false)
+    expect(s.kicked).toBe('')
+  })
+})

@@ -105,9 +105,13 @@ const reconnected = await guest.eval(`JSON.stringify({
   screen: window.__gdStore.getState().screen,
   lost: window.__gdStore.getState().guestLost,
   seat: window.__gdStore.getState().mySeat,
+  hasChip: !!document.querySelector('[data-testid=reconnected]'),
+  storeFlag: window.__gdStore.getState().reconnected,
 })`)
 console.log('after reconnect:', reconnected, 'guestErrors:', guest.consoleErrors)
-console.log('reconnect ok:', JSON.parse(reconnected).lost === false && JSON.parse(reconnected).seat >= 0)
+const reconnectInfo = JSON.parse(reconnected)
+console.log('reconnect ok:', reconnectInfo.lost === false && reconnectInfo.seat >= 0)
+console.log('reconnect chip gone:', reconnectInfo.hasChip === false && reconnectInfo.storeFlag === false)
 await guest.close()
 
 // 手机上观战也要放得下

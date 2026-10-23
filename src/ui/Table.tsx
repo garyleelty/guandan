@@ -259,6 +259,13 @@ export function Table() {
     setHint(null)
   }, [st.log.length, st.turn])
 
+  // 「已重新连接」只是提醒：4 秒后自己消失，别整局挂在顶栏
+  useEffect(() => {
+    if (!reconnected) return
+    const t = setTimeout(() => useStore.setState({ reconnected: false }), 4000)
+    return () => clearTimeout(t)
+  }, [reconnected])
+
   /** 为什么不能出：牌型不合法 / 压不过桌面（说清楚，禁用的按钮不该让人猜）。 */
   const blockReason = (() => {
     if (selCards.length === 0) return null

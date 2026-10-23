@@ -80,13 +80,31 @@ export const useStore = create<Store>((set, get) => ({
       isBot: [false, true, true, true],
       aiLevel,
     })
-    set({ screen: 'table', mode: 'solo', mySeat: 0, match })
+    set({
+      screen: 'table',
+      mode: 'solo',
+      mySeat: 0,
+      match,
+      // 别把上一段联机经历留下的「已重新连接 / 观战 / 被请出」带进单机局
+      reconnected: false,
+      spectating: false,
+      kicked: '',
+    })
     saveSolo(match, aiLevel, archivedRounds())
   },
   resumeSolo: (match, aiLevel, archive = []) => {
     // 续局：接回已打完的牌谱，并把归档水位对齐，避免把历史里的局再记一遍战绩
     primeMatchLog(match, archive)
-    set({ screen: 'table', mode: 'solo', mySeat: 0, match, aiLevel })
+    set({
+      screen: 'table',
+      mode: 'solo',
+      mySeat: 0,
+      match,
+      aiLevel,
+      reconnected: false,
+      spectating: false,
+      kicked: '',
+    })
   },
   dispatch: (a) => {
     const { mode, match } = get()
@@ -121,6 +139,9 @@ export const useStore = create<Store>((set, get) => ({
       roomWatchers: [],
       joining: false,
       guestLost: false,
+      reconnected: false,
+      spectating: false,
+      kicked: '',
       intentSink: null,
       afterDispatch: null,
       teardown: null,
