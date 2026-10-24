@@ -1,6 +1,6 @@
 {
   "project": "guandan-web",
-  "updatedAt": "2026-10-18",
+  "updatedAt": "2026-10-24",
   "stories": [
     {
       "id": "S1",
@@ -1190,6 +1190,121 @@
         {
           "id": "S44-4",
           "desc": "验收：169 tests + build + smoke-p2p 全过",
+          "check": "cmd"
+        }
+      ],
+      "status": "done"
+    },
+    {
+      "id": "S45",
+      "title": "官方规则口径对齐：接风搭档领出、进贡强制最大牌、还贡禁级牌、抗贡合计两张大王",
+      "criteria": [
+        {
+          "id": "S45-1",
+          "desc": "doPass 收招胜者打空 → 搭档接风领出（官方现行口径，替换「下家顺延」）",
+          "check": "cmd"
+        },
+        {
+          "id": "S45-2",
+          "desc": "doGive 校验贡牌必须是除逢人配外最大的牌；还贡排除级牌；抗贡改「进贡方合计两张大王」，一人声明全队免贡并退回已交贡牌",
+          "check": "cmd"
+        },
+        {
+          "id": "S45-3",
+          "desc": "UI：TributePanel/Table 只允许选合法贡牌/还牌（不可选变暗），抗贡按钮按合计口径；客人端抗贡可用性由房主序列化 antiOk 下发",
+          "check": "cmd"
+        },
+        {
+          "id": "S45-4",
+          "desc": "验收：tests 全过（engine/tribute/ai 用例按新口径重推）+ soak 40 场 0 问题 + spec 2026-10-23-official-rules-alignment.md",
+          "check": "cmd"
+        }
+      ],
+      "status": "done"
+    },
+    {
+      "id": "S46",
+      "title": "体验小件：理牌偏好持久化、复盘页去重、大厅死依赖、报牌口径文案",
+      "criteria": [
+        {
+          "id": "S46-1",
+          "desc": "理牌（点数/花色）偏好存 gd-sort-pref，下次进牌桌沿用",
+          "check": "cmd"
+        },
+        {
+          "id": "S46-2",
+          "desc": "ReplayView「牌型分布」只渲染一处；Lobby 的 useEffect 依赖 [screen]（window.screen）死依赖清理；HelpSheet 注明数字版自动报牌",
+          "check": "cmd"
+        }
+      ],
+      "status": "done"
+    },
+    {
+      "id": "S47",
+      "title": "AI 打分制升级：普通/难档模拟一步评局面（剩牌差/炸弹资产/出牌权/名次）",
+      "criteria": [
+        {
+          "id": "S47-1",
+          "desc": "evaluate()：队伍剩牌差+炸弹/王对资产+出牌权+走完名次；领出候选先按代价取前 12 再模拟打分（控耗时）",
+          "check": "cmd"
+        },
+        {
+          "id": "S47-2",
+          "desc": "守卫语义不变：队友坐庄必过、留炸、留级牌、紧急出手；难度阶梯测试（难>普通>简单）保持通过",
+          "check": "cmd"
+        },
+        {
+          "id": "S47-3",
+          "desc": "验收：ai.test 23 条全过 + soak 40 场 0 问题",
+          "check": "cmd"
+        }
+      ],
+      "status": "done"
+    },
+    {
+      "id": "S48",
+      "title": "P2P 回合计时+超时托管：真人限时 30s，到点房主托管代打并标记",
+      "criteria": [
+        {
+          "id": "S48-1",
+          "desc": "App effect（mode=host）对真人座起 turnMs() 计时（?turnMs= 可调，下限 1s）；到点用 aiMove/aiTributeMove 代打，log 打 auto 标记",
+          "check": "cmd"
+        },
+        {
+          "id": "S48-2",
+          "desc": "UI：P2P 牌桌显示 ⏱ 倒计时 chip（收到状态即重置），出牌记录显示「托管」；单机不计时",
+          "check": "cmd"
+        },
+        {
+          "id": "S48-3",
+          "desc": "真浏览器 scripts/smoke-timer.mjs：单机无倒计时、房主与客人超时都被托管且 auto 标记同步、双方 log 一致",
+          "check": "cmd"
+        }
+      ],
+      "status": "done"
+    },
+    {
+      "id": "S49",
+      "title": "联机房主转移：玩家客人收全量状态，最低座位人类客人接管当权威；心跳断线检测；自建信令选项",
+      "criteria": [
+        {
+          "id": "S49-1",
+          "desc": "serializeFor 增加 fullHands（玩家客人收全量手牌，观战者 hideHands 优先级最高仍全隐藏）",
+          "check": "cmd"
+        },
+        {
+          "id": "S49-2",
+          "desc": "房主每 4s ping，客人 12s 无消息判失联；失联分流：最低人类客人 migrateToHost（绑原 peer id、旧房主座交 AI、id 被占退避重试），其他人自动重连（含观战）",
+          "check": "cmd"
+        },
+        {
+          "id": "S49-3",
+          "desc": "hello 带 seat：新房主按 token → 座位+名字 认领原座并收 token；peerOpts() 支持环境变量指向自建信令服务器",
+          "check": "cmd"
+        },
+        {
+          "id": "S49-4",
+          "desc": "验收：room.test 6 条 + scripts/smoke-migrate.mjs（关房主页面→guestA 接管→guestB 重连追平 log→名字座位不乱）+ 全部 12 个冒烟 exit 0",
           "check": "cmd"
         }
       ],

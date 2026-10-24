@@ -545,3 +545,54 @@
   `guestRoomAi=2`，客人等候室文本含「难」；座位表仍同步，开局/出牌同步不受影响。
 - 顺手把 smoke-p2p 的固定 sleep 改成 waitFor，并给客人进房加了「握手慢就重连一次」，
   这台机器上 PeerJS 偶发 15 秒连不上，之前会把「没进来」当成「进来了」继续跑。
+
+## S45 官方规则口径对齐（接风/进贡/还贡/抗贡）done
+- 问题：四条规则与官方现行口径有偏差——①接风实现的是早期「下家领出」；②进贡可以
+  任交一张（官方要求最大牌且红桃级牌不能进贡）；③还贡可以还级牌；④抗贡按
+  「一家大小王各一/四王」（官方是进贡方合计两张大王）。经南信大/东南大学竞赛规则
+  PDF、北京日报、维基百科互证（docs/superpowers/specs/2026-10-23-official-rules-alignment.md）。
+- 修法：engine doPass 改搭档接风（对家借风）；doGive 用新的 tributeCandidates /
+  returnCandidates 校验贡牌与还牌；canAntiTribute 签名改为手牌数组（合计口径），
+  一人声明全队免贡、已交贡牌退回；UI 贡牌/还牌候选外全部变暗，抗贡按钮按合计判定，
+  客人端由房主序列化 antiOk 下发（客人看不到别人手牌）；AI 三处同步新口径。
+- 测试：engine.test 接风/升级序列按新口径重推（搭档接风会自然形成双下）；
+  tribute.test 新增 交非最大非法 / 红桃级牌禁贡 / 还贡禁级牌 / 一大一小不能抗贡 /
+  两张大王抗贡全队免贡；进贡局的级数=升级后的级数（造测试时先算 delta，这个坑写进了 spec）。
+- 回归：177 tests 全过；soak 40 场 0 问题。
+
+## S46 体验小件 done
+- 理牌（点数/花色）偏好存 gd-sort-pref；ReplayView 重复的「牌型分布」段落去掉一处；
+  Lobby.tsx 的 useEffect 依赖 [screen]（实际是 window.screen，永远不触发）改成 []；
+  HelpSheet 注明「剩 10 张以内要报牌——数字牌桌自动亮出」的口径。
+
+## S47 AI 打分制升级 done
+- 普通及以上难度在原代价模型上叠加「模拟一步 → 局面打分」：evaluate() 按队伍算
+  剩牌差（搭档也算我方）、炸弹/王对资产、出牌权、走完名次与整场胜负；领出先按
+  代价取前 12 名候选再逐个模拟（每个候选要克隆一次局面，控制耗时）。
+- 确定性守卫保留：队友坐庄必过、非紧急不拆炸弹、级牌单/对留后手、对手 1-2 张果断
+  出炸；简单档保持原样（纯代价+抖动）。难度阶梯测试（难>普通>简单）继续通过。
+
+## S48 P2P 回合计时+超时托管 done
+- 问题：P2P 牌局一个人不动全场干等（AI 座位由 App effect 接手，真人座没人管）。
+- 修法：App 增加托管 effect（mode=host 时对真人座起 turnMs() 计时，默认 30s、
+  ?turnMs= 可调下限 1s），到点用 aiMove/aiTributeMove 代打，Action 增加 auto 标记
+  进 log；牌桌显示 ⏱ 倒计时 chip（收到新状态即重置），出牌记录显示「托管」；
+  单机不计时。engine 的 LogEntry/Action 增加 auto?: boolean（复盘编码不受影响）。
+- 真浏览器（scripts/smoke-timer.mjs）：单机无倒计时；房主与客人超时都被托管、
+  auto 标记两端同步、双方 log/手牌数一致、倒计时 chip 在走。
+
+## S49 联机房主转移 done
+- 问题：房主即服务器，房主关页面整场牌局陪葬；且 WebRTC 的 close 事件可能迟到
+  几十秒，客人都不知道房主已经没了。
+- 修法（docs/superpowers/specs/2026-10-24-host-migration.md）：
+  ① serializeFor 增加 fullHands——玩家客人收全量手牌（UI 仍只渲染自己的牌），
+  观战者 hideHands 优先级最高依旧全隐藏（不回退 45f0470）；
+  ② 房主每 4s 广播 ping，客人 12s 无消息判失联；
+  ③ 失联分流：最低座位的人类客人 migrateToHost（用本地全量状态当权威、绑原
+  gd-<房码>、旧房主的座交给 AI、id 被占退避重试 3 次）；其他人（含观战者）自动重连；
+  ④ hello 带 seat，新房主按 token → 「座位+名字」认领原座；
+  ⑤ peerOpts() 支持环境变量指向自建信令服务器（公共云抽风时用：nohup npx peer
+  --port=9000 & + VITE_PEER_HOST/PORT/SECURE）。
+- 真浏览器（scripts/smoke-migrate.mjs）：双客人不同 token/昵称进房 → 打几手 →
+  关房主页面 → guestA 接管当 host（旧房主座显示 AI）、guestB 自动重连追平 log、
+  名字与座位表不乱、牌局继续走。12 个冒烟脚本全部 exit 0。
