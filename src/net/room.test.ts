@@ -35,4 +35,18 @@ describe('联机状态序列化', () => {
       }
     }
   })
+
+  it('fullHands：玩家客人拿全量状态（房主转移时谁都能接管当权威）', () => {
+    const st = newGame({ seed: 4 })
+    for (const seat of [0, 1, 2, 3] as const) {
+      const wire = serializeFor(st, seat, { fullHands: true })
+      wire.players.forEach((p, i) => expect(p.hand).toEqual(st.players[i]!.hand))
+    }
+  })
+
+  it('fullHands 与 hideHands 互斥：观战者永远拿不到任何人的手牌', () => {
+    const st = newGame({ seed: 5 })
+    const wire = serializeFor(st, 0, { hideHands: true, fullHands: true })
+    expect(wire.players.every((p) => p.hand.every((c) => c.id.startsWith('hidden-')))).toBe(true)
+  })
 })

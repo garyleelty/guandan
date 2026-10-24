@@ -2,7 +2,7 @@ import Peer from 'peerjs'
 import type { DataConnection } from 'peerjs'
 import { nextRound, step } from '../core/engine'
 import type { Action, GameState, Seat } from '../core/engine'
-import { peerIdOf, makeRoomCode, serializeFor } from './room'
+import { peerIdOf, makeRoomCode, serializeFor, newPeer } from './room'
 import type { Msg } from './room'
 import { useStore } from '../state/store'
 
@@ -46,20 +46,49 @@ export function createRoom(): void {
   const code = makeRoomCode()
   const seats = initialSeats()
   const usedNames = new Set<string>([seats[0]!.name])
-  const peer = new Peer(peerIdOf(code))
+  const peer = newPeer(peerIdOf(code))
   room = { code, peer, seats, match: null, usedNames, spectators: [], banned: new Set() }
   ;(window as unknown as Record<string, unknown>).__gdHost = room
 
   peer.on('open', () => {
+    startHeartbeat()
     useStore.setState({ screen: 'room', mode: 'host', roomCode: code, roomSeats: [...room!.seats] })
   })
+  wireHostPeer(peer)
+  peer.on('error', (err) => {
+    console.error('peer error', err)
+  })
+}
+
+/** 房主心跳：WebRTC 的 close 事件可能迟到几十秒，靠 ping 让客人及时感知房主没了。 */
+let heartbeat: ReturnType<typeof setInterval> | null = null
+
+function startHeartbeat(): void {
+  stopHeartbeat()
+  heartbeat = setInterval(() => {
+    const r = room
+    if (!r) return
+    const all: DataConnection[] = [
+      ...r.seats.filter((s) => s.connId).flatMap((s) => (r.peer.connections as Record<string, DataConnection[]>)[s.connId!] ?? []),
+      ...r.spectators.flatMap((sp) => (r.peer.connections as Record<string, DataConnection[]>)[sp.connId] ?? []),
+    ]
+    for (const conn of all) conn?.send({ t: 'ping' } satisfies Msg)
+  }, 4000)
+}
+
+function stopHeartbeat(): void {
+  if (heartbeat !== null) {
+    clearInterval(heartbeat)
+    heartbeat = null
+  }
+}
+
+/** 房主节点的连接事件：建房与房主转移共用。 */
+function wireHostPeer(peer: Peer): void {
   peer.on('connection', (conn) => {
     conn.on('data', (raw: unknown) => hostHandle(conn, raw as Msg))
     conn.on('close', () => hostDrop(conn))
     conn.on('error', () => hostDrop(conn))
-  })
-  peer.on('error', (err) => {
-    console.error('peer error', err)
   })
 }
 
@@ -100,7 +129,8 @@ function hostHandle(conn: DataConnection, msg: Msg): void {
     }
     return
   }
-  // 认领原座：同一个 token 再来（刷新页面、断线重连）就还是那个座位
+  // 认领原座：同一个 token 再来（刷新页面、断线重连）就还是那个座位；
+  // 房主转移后新房主不认识旧 token，退而按「座位 + 名字」认领断线客人的空座
   const token = msg.token
   // 被房主请出过的人就别再进来了：说清楚原因，别让他以为只是掉线
   if (token && r.banned.has(token)) {
@@ -109,8 +139,14 @@ function hostHandle(conn: DataConnection, msg: Msg): void {
     return
   }
   // 房主座位没有 token；客人座位断线后会变空位/AI，但 token 留着，好让重连认领
-  const mine = token ? r.seats.find((s) => s.token === token) : undefined
   let name = (msg.name || '玩家').slice(0, 8)
+  const mine =
+    (token ? r.seats.find((s) => s.token === token) : undefined) ??
+    (msg.watch
+      ? undefined
+      : r.seats.find(
+          (s) => s.kind === 'guest' && !s.connId && s.name === name && (msg.seat === undefined || msg.seat === s.seat),
+        ))
   if (usedName(r, name)) name = `${name}2`
   r.usedNames.add(name)
   let seat: Seat | undefined
@@ -243,10 +279,11 @@ export function broadcastState(): void {
   const m = useStore.getState().match ?? r.match
   if (!m) return
   r.match = m
+  // 玩家客人拿全量状态（手牌在 UI 层隔离渲染）：房主转移时任何一位客人都要能接管当权威
   for (const s of r.seats) {
     if (s.kind !== 'guest' || !s.connId) continue
     const conn = (r.peer.connections as Record<string, DataConnection[]>)[s.connId]?.[0]
-    conn?.send({ t: 'state', state: serializeFor(m, s.seat), seat: s.seat } satisfies Msg)
+    conn?.send({ t: 'state', state: serializeFor(m, s.seat, { fullHands: true }), seat: s.seat } satisfies Msg)
   }
   for (const sp of r.spectators) {
     const conn = (r.peer.connections as Record<string, DataConnection[]>)[sp.connId]?.[0]
@@ -268,6 +305,78 @@ export function hostApplyIntent(seat: Seat, action: Action): void {
 }
 
 export function destroyRoom(): void {
+  stopHeartbeat()
   room?.peer.destroy()
   room = null
+}
+
+/**
+ * 房主转移：房主掉线后，最低座位的人类客人用本地全量状态接管当权威节点。
+ * - 绑定原房间 peer id（gd-<房码>），其他客人自动重连进来（token / 座位+名字 认领原座）；
+ * - 断线客人的座先交给 AI 打，重连后收回；
+ * - 旧房主的座在牌局里也交给 AI（他回来只能通过邀请链接当客人进）；
+ * - peer id 被占（旧房主僵尸/转移竞速）就退避重试，几次不行就放弃。
+ */
+export function migrateToHost(): void {
+  const s = useStore.getState()
+  const code = s.roomCode
+  const match = s.match
+  const seats = s.roomSeats
+  const mySeat = s.mySeat
+  if (!code || !match || !seats || s.spectating || room) return
+
+  const taken: RoomSeat[] = seats.map((rs) => {
+    const seat = rs.seat as Seat
+    if (seat === mySeat) return { seat, name: rs.name || nick(), kind: 'host', connId: null }
+    // 旧房主走了：牌局还在就把他的座给 AI 接管，不然空出来
+    if (rs.kind === 'host') return { seat, name: match ? rs.name : '', kind: match ? 'ai' : 'empty', connId: null }
+    return { seat, name: rs.name, kind: rs.kind, connId: null }
+  })
+  // 断线的人先由 AI 代打，重连后 hostHandle 会把 isBot 收回来
+  for (const rs of taken) {
+    if (rs.seat !== mySeat && rs.kind !== 'empty') match.players[rs.seat]!.isBot = true
+  }
+
+  let attempts = 0
+  const boot = (): void => {
+    const peer = newPeer(peerIdOf(code))
+    room = {
+      code,
+      peer,
+      seats: taken,
+      match,
+      usedNames: new Set(taken.filter((x) => x.name).map((x) => x.name)),
+      spectators: [],
+      banned: new Set(),
+    }
+    ;(window as unknown as Record<string, unknown>).__gdHost = room
+    wireHostPeer(peer)
+    peer.on('open', () => {
+      startHeartbeat()
+      useStore.setState({
+        mode: 'host',
+        screen: 'table',
+        roomSeats: [...taken],
+        guestLost: false,
+        joining: false,
+        intentSink: null,
+        afterDispatch: broadcastState,
+        teardown: destroyRoom,
+        rematchSink: hostStart,
+      })
+      hostSeatsChanged(room!)
+      broadcastState()
+    })
+    peer.on('error', (err) => {
+      const type = (err as { type?: string }).type
+      if (type === 'unavailable-id' && attempts < 3) {
+        attempts++
+        destroyRoom()
+        setTimeout(boot, 2000)
+        return
+      }
+      console.error('migrated host peer error', err)
+    })
+  }
+  boot()
 }
