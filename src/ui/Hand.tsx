@@ -3,6 +3,7 @@ import { CardFace } from './CardFace'
 import type { CardSize } from './CardFace'
 import type { Card } from '../core/cards'
 import { useMediaQuery } from './useMediaQuery'
+import { buildStackView } from './stackView'
 
 /** 手牌档位：桌面大牌 / 平板中牌 / 手机小牌；每档给出牌宽与最大露出宽度。 */
 const TIERS: Record<string, { size: CardSize; w: number; maxStrip: number; minStrip: number }> = {
@@ -27,8 +28,8 @@ export function Hand({
   dimmed?: (c: Card) => boolean
   /** 级牌对应的牌面点数（2 级 = 18），用于角标 */
   levelCardRank?: number
-  /** row = 底部一排（重叠）；grid = 全部摊开，手机上才看得清 27 张 */
-  view?: 'row' | 'grid'
+  /** row = 底部一排（重叠）；grid = 全部摊开；stack = 点数×花色堆叠矩阵，同花顺高亮 */
+  view?: 'row' | 'grid' | 'stack'
 }) {
   const wide = useMediaQuery('(min-width: 1024px)')
   const mid = useMediaQuery('(min-width: 640px)')
@@ -55,6 +56,68 @@ export function Hand({
     ro.observe(el)
     return () => ro.disconnect()
   }, [hand.length, tier])
+
+  if (view === 'stack') {
+    const sv = buildStackView(hand, levelCardRank)
+    const cell = (c: Card, key: string, hot: boolean) => (
+      <button
+        key={key}
+        onClick={() => toggle(c.id)}
+        onDoubleClick={() => quickLead?.(c.id)}
+        className="cursor-pointer bg-transparent border-0 p-0"
+        aria-label={c.id}
+        aria-pressed={selected.has(c.id)}
+      >
+        <div className={['relative rounded-[6px]', hot && !selected.has(c.id) ? 'ring-2 ring-accent' : ''].join(' ')}>
+          <CardFace card={c} size="sm" selected={selected.has(c.id)} dim={dimmed?.(c)} />
+          {c.rank === levelCardRank &&
+            (c.suit === 1 ? (
+              <span className="absolute -top-1.5 -right-1.5 flex h-[17px] w-[17px] items-center justify-center rounded-full bg-ink text-[11px] font-bold text-black">
+                配
+              </span>
+            ) : (
+              <span className="absolute -top-1.5 -right-1.5 flex h-[17px] w-[17px] items-center justify-center rounded-full bg-accent text-[11px] font-bold text-black">
+                级
+              </span>
+            ))}
+        </div>
+      </button>
+    )
+    return (
+      <div className="max-h-[52vh] overflow-auto px-2 py-2">
+        <div className="mx-auto w-max">
+          {sv.rows.map((row) => (
+            <div key={row.eff} className="flex items-center gap-1 py-0.5">
+              <div className="w-9 shrink-0 text-right text-[12px] font-bold text-faint">{row.label}</div>
+              {(row.cells[0]!.suit < 0 ? row.cells : [0, 1, 2, 3].map((suit) => row.cells.find((c) => c.suit === suit))).map(
+                (c) => (
+                  <div
+                    key={c ? c.key : `empty-${row.eff}`}
+                    className={[
+                      'relative flex justify-center rounded-[8px] px-0.5 py-1',
+                      c && sv.flushRun.has(c.key) ? 'bg-accent/10' : '',
+                    ].join(' ')}
+                    style={{ width: 58, minHeight: 92 }}
+                  >
+                    {c?.cards.map((cd, i) => (
+                      <div
+                        key={cd.id}
+                        className="absolute"
+                        style={{ top: 4 + i * 14, left: 4 + i * 6, zIndex: i }}
+                      >
+                        {cell(cd, cd.id, sv.flushRun.has(c.key))}
+                      </div>
+                    ))}
+                  </div>
+                ),
+              )}
+            </div>
+          ))}
+          {hand.length === 0 && <div className="py-4 text-center text-sm text-faint">已出完</div>}
+        </div>
+      </div>
+    )
+  }
 
   if (view === 'grid') {
     return (

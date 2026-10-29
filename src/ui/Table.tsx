@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { CardFace } from './CardFace'
 import { Hand } from './Hand'
 import { Mark, SoundIcon } from './Mark'
@@ -175,7 +175,7 @@ export function Table() {
       localStorage.setItem('gd-sort-pref', next)
       return next
     })
-  const [handView, setHandView] = useState<'row' | 'grid'>('row')
+  const [handView, setHandView] = useState<'row' | 'grid' | 'stack'>('row')
   const [showHistory, setShowHistory] = useState(false)
   const [hint, setHint] = useState<string | null>(null)
   const [fx, setFx] = useState<0 | 7 | 9>(0)
@@ -511,11 +511,11 @@ export function Table() {
           <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
             <button
               className="btn btn-ghost btn-sm max-sm:px-2"
-              onClick={() => setHandView((v) => (v === 'row' ? 'grid' : 'row'))}
-              title={handView === 'row' ? '摊开手牌，看清每一张' : '收回手牌'}
+              onClick={() => setHandView((v) => (v === 'row' ? 'grid' : v === 'grid' ? 'stack' : 'row'))}
+              title={handView === 'row' ? '摊开手牌，看清每一张' : handView === 'grid' ? '点数×花色堆叠，同花顺高亮' : '收回手牌'}
               data-testid="hand-view"
             >
-              {handView === 'row' ? '摊牌' : '收牌'}
+              {handView === 'row' ? '摊牌' : handView === 'grid' ? '堆叠' : '收牌'}
             </button>
             <button
               className="btn btn-ghost btn-sm max-sm:px-2"
@@ -631,6 +631,29 @@ function EndOverlay({ onRematch, onLobby }: { onRematch: () => void; onLobby: ()
   // A 级双下但上一局下游那队：按官方规则赢不了整场
   const blockedByDweller =
     st.matchWinner === null && st.levels[teamOf(winner.seat)] === 14 && st.dwellerTeam === teamOf(winner.seat)
+  // 自动续局（房主/单机）：3 秒后自动开下一局；整场打完不自动（留给分享/休息）
+  const [autoNext, setAutoNext] = useState<boolean>(() => localStorage.getItem('gd-auto-rematch') !== '0')
+  const [countdown, setCountdown] = useState<number | null>(null)
+  const rematchRef = useRef(onRematch)
+  rematchRef.current = onRematch
+  useEffect(() => {
+    if (isMatch || mode === 'guest' || !autoNext) {
+      setCountdown(null)
+      return
+    }
+    setCountdown(3)
+    const tick = setInterval(() => setCountdown((c) => (c === null ? null : c - 1)), 1000)
+    const go = setTimeout(() => rematchRef.current(), 3000)
+    return () => {
+      clearInterval(tick)
+      clearTimeout(go)
+    }
+  }, [isMatch, mode, autoNext])
+  const toggleAuto = () => {
+    const next = !autoNext
+    setAutoNext(next)
+    localStorage.setItem('gd-auto-rematch', next ? '1' : '0')
+  }
   return (
     <div className="fixed inset-0 z-30 flex items-center justify-center overflow-y-auto bg-ground/85 px-4">
       <div className="panel my-auto w-[380px] max-w-full p-5 sm:p-6">
@@ -687,6 +710,32 @@ function EndOverlay({ onRematch, onLobby }: { onRematch: () => void; onLobby: ()
             {shared ? '链接已复制' : '分享这局'}
           </button>
         </div>
+        {mode !== 'guest' && !isMatch && (
+          <button
+            className="mt-2 flex w-full items-center justify-center gap-2 text-[12px] text-faint"
+            onClick={toggleAuto}
+            data-testid="auto-rematch"
+            title="结算后 3 秒自动开下一局，不想等就关掉"
+          >
+            <span
+              className={[
+                'flex h-4 w-7 items-center rounded-full px-0.5 transition-colors',
+                autoNext ? 'bg-accent' : 'bg-control',
+              ].join(' ')}
+            >
+              <span
+                className={[
+                  'h-3 w-3 rounded-full bg-white transition-transform',
+                  autoNext ? 'translate-x-3' : '',
+                ].join(' ')}
+              />
+            </span>
+            自动续局
+            {autoNext && countdown !== null && countdown > 0 && (
+              <span className="num text-accent">· {countdown}s 后开局</span>
+            )}
+          </button>
+        )}
         <div className="mt-2 flex gap-2">
           {mode === 'guest' ? (
             <span className="flex h-9 flex-1 items-center justify-center rounded-control border border-line text-[13px] text-muted">
