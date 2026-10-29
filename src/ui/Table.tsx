@@ -501,7 +501,11 @@ export function Table() {
               {selCombo ? ` · ${selCards.length} 张` : ''}
             </span>
           )}
-          {hint ? <span className="text-[13px] text-accent">{hint}</span> : null}
+          {hint ? (
+            <span className="chip bg-accent/15 text-accent" data-testid="hint-chip">
+              {hint}
+            </span>
+          ) : null}
           {!hint && blockReason ? (
             <span className="text-[13px] text-muted" data-testid="block-reason">
               {blockReason}

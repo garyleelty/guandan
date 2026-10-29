@@ -36,6 +36,7 @@
 
   --animate-shake: shake 0.4s ease-in-out;
   --animate-pop: pop 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  --animate-raise: raise 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2);
   --animate-flash: flash 1s ease-in-out infinite;
   --animate-deal: deal 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
   --animate-land-bottom: land-bottom 0.2s cubic-bezier(0.2, 0.9, 0.3, 1) both;
@@ -53,6 +54,12 @@
   @keyframes pop {
     0% { transform: scale(0.6); opacity: 0; }
     100% { transform: scale(1); opacity: 1; }
+  }
+  /* 选牌反馈：点中的牌弹一下 */
+  @keyframes raise {
+    0% { transform: translateY(2px) scale(0.96); }
+    45% { transform: translateY(-4px) scale(1.04); }
+    100% { transform: translateY(0) scale(1); }
   }
   @keyframes flash {
     0%, 100% { opacity: 1; }

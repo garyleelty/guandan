@@ -1,6 +1,6 @@
 {
   "project": "guandan-web",
-  "updatedAt": "2026-10-24",
+  "updatedAt": "2026-10-30",
   "stories": [
     {
       "id": "S1",
@@ -1305,6 +1305,33 @@
         {
           "id": "S49-4",
           "desc": "验收：room.test 6 条 + scripts/smoke-migrate.mjs（关房主页面→guestA 接管→guestB 重连追平 log→名字座位不乱）+ 全部 12 个冒烟 exit 0",
+          "check": "cmd"
+        }
+      ],
+      "status": "done"
+    },
+    {
+      "id": "S50",
+      "title": "手牌易用性专项：叠放策略、点击手感、提示 chip",
+      "criteria": [
+        {
+          "id": "S50-1",
+          "desc": "叠放：放得下就摊开；27 张收紧时分组间隙计入宽度，无横向滚动条；不同点数自然分组",
+          "check": "cmd"
+        },
+        {
+          "id": "S50-2",
+          "desc": "点击：悬停上浮、选中弹跳+投影、双击领出有 title 提示",
+          "check": "cmd"
+        },
+        {
+          "id": "S50-3",
+          "desc": "提示：建议文案升级为 chip，与自动选中牌联动",
+          "check": "cmd"
+        },
+        {
+          "id": "S50-4",
+          "desc": "验收：182 tests 全过 + 浏览器截图实测",
           "check": "cmd"
         }
       ],

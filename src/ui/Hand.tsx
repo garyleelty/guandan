@@ -38,24 +38,29 @@ export function Hand({
   const wrapRef = useRef<HTMLDivElement>(null)
   const [strip, setStrip] = useState(tier.maxStrip)
 
-  // 手牌 27 张时按可用宽度收紧重叠，保证整排不撑破页面
+  // 手牌按可用宽度收紧重叠：宽裕时完全摊开，挤的时候保证角标至少露出来，
+  // 再挤就横向滚动（minStrip 兜底），永远不把牌叠成看不清。
+  // 分组间隙（不同点数之间多让 4px）也算进可用宽度，别把滚动条挤出来。
   useEffect(() => {
     const el = wrapRef.current
     if (!el) return
     const compute = () => {
       const n = hand.length
       if (n <= 1) {
-        setStrip(tier.maxStrip)
+        setStrip(tier.w)
         return
       }
-      const avail = el.clientWidth - 16 - tier.w
-      setStrip(Math.max(tier.minStrip, Math.min(tier.maxStrip, Math.floor(avail / (n - 1)))))
+      const groups = new Set(hand.map((c) => c.rank)).size
+      const gaps = Math.max(0, groups - 1) * 4
+      const avail = el.clientWidth - 16 - tier.w - gaps
+      const fair = Math.floor(avail / (n - 1))
+      setStrip(fair >= tier.w ? tier.w : Math.max(tier.minStrip, fair))
     }
     compute()
     const ro = new ResizeObserver(compute)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [hand.length, tier])
+  }, [hand.length, tier, hand])
 
   if (view === 'stack') {
     const sv = buildStackView(hand, levelCardRank)
@@ -131,7 +136,7 @@ export function Hand({
               aria-label={c.id}
               aria-pressed={selected.has(c.id)}
             >
-              <div className="relative">
+              <div className="relative transition-transform duration-150 hover:-translate-y-1">
                 <CardFace card={c} size="sm" selected={selected.has(c.id)} dim={dimmed?.(c)} />
                 {c.rank === levelCardRank &&
                   (c.suit === 1 ? (
@@ -155,32 +160,43 @@ export function Hand({
   return (
     <div ref={wrapRef} className="w-full overflow-x-auto overflow-y-hidden">
       <div className="mx-auto flex w-max items-end px-2 pt-6 pb-2">
-        {hand.map((c, i) => (
-          <button
-            key={c.id}
-            onClick={() => toggle(c.id)}
-            onDoubleClick={() => quickLead?.(c.id)}
-            className="cursor-pointer bg-transparent border-0 p-0 transition-[margin] duration-300 ease-out"
-            style={{ marginLeft: i === 0 ? 0 : -(tier.w - strip), zIndex: i }}
-            aria-label={c.id}
-            aria-pressed={selected.has(c.id)}
-          >
-            <div className="animate-deal">
-              <CardFace card={c} size={tier.size} selected={selected.has(c.id)} dim={dimmed?.(c)} />
-              {c.rank === levelCardRank &&
-                (c.suit === 1 ? (
-                  // 逢人配：红桃级牌
-                  <span className="absolute -top-1.5 -right-1.5 flex h-[17px] w-[17px] items-center justify-center rounded-full bg-ink text-[11px] font-bold text-black">
-                    配
-                  </span>
-                ) : (
-                  <span className="absolute -top-1.5 -right-1.5 flex h-[17px] w-[17px] items-center justify-center rounded-full bg-accent text-[11px] font-bold text-black">
-                    级
-                  </span>
-                ))}
-            </div>
-          </button>
-        ))}
+        {hand.map((c, i) => {
+          const prev = hand[i - 1]
+          // 不同点数之间多让 4px：整排按点数自然分组，扫一眼就知道手里有哪些点
+          const groupGap = i > 0 && prev && prev.rank !== c.rank ? 4 : 0
+          return (
+            <button
+              key={c.id}
+              onClick={() => toggle(c.id)}
+              onDoubleClick={() => quickLead?.(c.id)}
+              title="单击选牌 · 双击直接领出这张"
+              className="cursor-pointer bg-transparent border-0 p-0 transition-[margin] duration-300 ease-out"
+              style={{ marginLeft: i === 0 ? 0 : -(tier.w - strip) + groupGap, zIndex: i }}
+              aria-label={c.id}
+              aria-pressed={selected.has(c.id)}
+            >
+              <div
+                className={[
+                  'animate-deal transition-transform duration-150 hover:-translate-y-2',
+                  selected.has(c.id) ? 'animate-raise drop-shadow-[0_6px_10px_rgba(0,0,0,0.45)]' : '',
+                ].join(' ')}
+              >
+                <CardFace card={c} size={tier.size} selected={selected.has(c.id)} dim={dimmed?.(c)} />
+                {c.rank === levelCardRank &&
+                  (c.suit === 1 ? (
+                    // 逢人配：红桃级牌
+                    <span className="absolute -top-1.5 -right-1.5 flex h-[17px] w-[17px] items-center justify-center rounded-full bg-ink text-[11px] font-bold text-black">
+                      配
+                    </span>
+                  ) : (
+                    <span className="absolute -top-1.5 -right-1.5 flex h-[17px] w-[17px] items-center justify-center rounded-full bg-accent text-[11px] font-bold text-black">
+                      级
+                    </span>
+                  ))}
+              </div>
+            </button>
+          )
+        })}
         {hand.length === 0 && <div className="text-sm text-faint">已出完</div>}
       </div>
     </div>
