@@ -23,7 +23,8 @@ jobs:
           bun-version: latest
       - run: bun install --frozen-lockfile
       - run: bunx tsc --noEmit
-      - run: bunx vitest run
+      # 测试由 ci.yml 在同一提交上跑（vitest 在 runner 上偶发超时会把部署拖挂）；
+      # 这里只做确定性的类型检查与构建
       - run: bun run build
         env:
           GH_PAGES: '1'
