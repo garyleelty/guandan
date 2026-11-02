@@ -62,12 +62,14 @@ export function TributePanel({ st, mySeat }: { st: GameState; mySeat: Seat }) {
             <span className="w-16 shrink-0 truncate">{st.players[l.g]!.name}</span>
             <span className="text-ink">
               {l.text.replace(st.players[l.g]!.name, '').trim() || l.text}
-              {l.card ? <CardTag rank={l.card.rank} suit={l.card.suit} /> : null}
+              {l.card ? <CardTag rank={l.card.rank} suit={l.card.suit} level={st.handLevel} /> : null}
               {l.to ? ` → ${l.to}` : ''}
             </span>
           </div>
         ))}
       </div>
+
+      <div className="text-[12px] text-faint">贡牌是进贡者上局剩牌中最大的一张——级牌比 A 大，牌面上标「级」。</div>
 
       {t.step === 'give' && t.givers.length > 1 && (
         <div className="text-[12px] text-faint">双下游：两人各交一张，大的给头游、小的给二游</div>
@@ -77,14 +79,22 @@ export function TributePanel({ st, mySeat }: { st: GameState; mySeat: Seat }) {
   )
 }
 
-/** 牌面小字：点数 + 花色（花色用矢量） */
-function CardTag({ rank, suit }: { rank: number; suit: number }) {
+/** 牌面小字：点数 + 花色（花色用矢量）；级牌带角标——不然级牌 5 看着像张小牌 */
+function CardTag({ rank, suit, level }: { rank: number; suit: number; level: number }) {
   if (rank === 16) return <span className="text-ink">小王</span>
   if (rank === 17) return <span className="text-ink">大王</span>
+  const isLevel = rank === level
   return (
     <span className="inline-flex items-center gap-1 text-ink">
       {RANK_LABEL[rank] ?? rank}
       <Suit suit={suit} className="h-3 w-3" style={{ color: suit === 1 || suit === 3 ? 'var(--color-suit-red)' : undefined }} />
+      {isLevel &&
+        (suit === 1 ? (
+          // 逢人配：红桃级牌（只在进贡者手里只剩它时才会出现）
+          <span className="flex h-[14px] w-[14px] items-center justify-center rounded-full bg-ink text-[10px] font-bold text-black">配</span>
+        ) : (
+          <span className="flex h-[14px] w-[14px] items-center justify-center rounded-full bg-accent text-[10px] font-bold text-black">级</span>
+        ))}
     </span>
   )
 }

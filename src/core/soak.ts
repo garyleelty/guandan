@@ -1,6 +1,6 @@
 import { aiMove, aiTributeMove } from './ai'
 import { ComboType, identify } from './combos'
-import { nextRound, step } from './engine'
+import { nextRound, step, tributeCandidates } from './engine'
 import type { GameState } from './engine'
 
 export type SoakIssue = { kind: string; detail: string }
@@ -122,6 +122,17 @@ export function runSoak(matches: number, maxRounds = 40): SoakResult {
           if (before.tribute.step === 'return' && before.tribute.anti.length > 0) hit('抗贡')
         }
         const mv = aiTributeMove(st, st.turn)
+        // 官方口径：贡牌必须是进贡者剩牌里最大的一张（红桃级牌除外）——展示层标「级」容易让人
+        // 误以为小点数牌进贡是 bug，这里把不变量钉死
+        if (mv.kind === 'give' && mv.card !== undefined && before.tribute?.step === 'give') {
+          const hand = before.players[mv.seat]!.hand
+          if (!tributeCandidates(hand, before.handLevel).some((c) => c.id === mv.card)) {
+            note(
+              '贡牌不是剩牌最大',
+              `seed=${seed} seat=${mv.seat} card=${mv.card} cands=${JSON.stringify(tributeCandidates(hand, before.handLevel).map((c) => c.id))}`,
+            )
+          }
+        }
         if (!mv) {
           note('进贡阶段 AI 没动作', `seed=${seed} turn=${st.turn} step=${st.tribute?.step}`)
           break
