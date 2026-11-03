@@ -46,6 +46,8 @@ export type TributeState = {
   given: Record<number, string | null>
   /** 已交的牌（实体，用于发新局） */
   cards: Record<number, Card>
+  /** 进贡者交贡时的剩牌张数——面板要解释「为啥交这张」（剩得少，大牌早打完了） */
+  leftover: Record<number, number>
   /** 抗贡的座位 */
   anti: Seat[]
   /** 收贡者 → 收到的贡牌 id（发牌后才有） */
@@ -165,6 +167,7 @@ export function newTributeRound(prev: GameState, opts?: { seed?: number }): Game
       givers,
       given: {},
       cards: {},
+      leftover: {},
       anti: [],
       received: {},
       step: 'give',
@@ -276,6 +279,7 @@ function doGive(state: GameState, action: Action & { kind: 'give' }): GameState 
     if (!card) return state
     // 官方口径：必须交手里最大的一张（红桃级牌不能进贡）
     if (!tributeCandidates(st.players[action.seat]!.hand, st.handLevel).some((c) => c.id === card.id)) return state
+    tt.leftover[action.seat] = st.players[action.seat]!.hand.length
     st.players[action.seat]!.hand = st.players[action.seat]!.hand.filter((c) => c.id !== card.id)
     tt.given[action.seat] = card.id
     tt.cards[action.seat] = card

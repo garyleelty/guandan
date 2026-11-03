@@ -172,6 +172,7 @@ function tributeState(st: GameState, turn: Seat, step: 'give' | 'return'): GameS
       to: {},
       given: {},
       cards: {},
+      leftover: {},
       anti: [],
       received: {},
       step,

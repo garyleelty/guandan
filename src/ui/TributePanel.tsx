@@ -21,12 +21,14 @@ export function TributePanel({ st, mySeat }: { st: GameState; mySeat: Seat }) {
 
   const lines = t.givers.map((g) => {
     const name = st.players[g]!.name
-    if (t.anti.includes(g)) return { g, text: `${name} 抗贡`, card: null, to: null }
+    if (t.anti.includes(g)) return { g, text: `${name} 抗贡`, card: null, to: null, leftover: null }
     const cardId = t.given[g]
-    if (!cardId) return { g, text: `${name} 待进贡`, card: null, to: null }
+    if (!cardId) return { g, text: `${name} 待进贡`, card: null, to: null, leftover: null }
     const card = t.cards[g]
     const to = t.to[g] != null ? st.players[t.to[g]!]!.name : '—'
-    return { g, text: `${name} 交`, card: card ? { rank: card.rank, suit: card.suit } : null, to }
+    // 剩牌张数 = 交贡那一刻手里的牌数（含贡牌）；小牌进贡基本都发生在「就剩一两张」的时候
+    const n = (t as { leftover?: Record<number, number> }).leftover?.[g]
+    return { g, text: `${name} 交`, card: card ? { rank: card.rank, suit: card.suit } : null, to, leftover: n ?? null }
   })
 
   const instruction = (() => {
@@ -64,12 +66,15 @@ export function TributePanel({ st, mySeat }: { st: GameState; mySeat: Seat }) {
               {l.text.replace(st.players[l.g]!.name, '').trim() || l.text}
               {l.card ? <CardTag rank={l.card.rank} suit={l.card.suit} level={st.handLevel} /> : null}
               {l.to ? ` → ${l.to}` : ''}
+              {l.leftover != null && (
+                <span className="ml-1 text-faint">（上局剩 {l.leftover} 张）</span>
+              )}
             </span>
           </div>
         ))}
       </div>
 
-      <div className="text-[12px] text-faint">贡牌是进贡者上局剩牌中最大的一张——级牌比 A 大，牌面上标「级」。</div>
+      <div className="text-[12px] text-faint">贡牌是进贡者上局剩牌中最大的一张——级牌比 A 大，牌面上标「级」；剩得少时，最大的也可能只是张小牌。</div>
 
       {t.step === 'give' && t.givers.length > 1 && (
         <div className="text-[12px] text-faint">双下游：两人各交一张，大的给头游、小的给二游</div>
